@@ -17,24 +17,11 @@ The app allows users to:
     - 📚 Readability scoring (Flesch-Kincaid)
     - 🌐 Source profile pages
 
----
 
-## 🧩 Tech Stack
-| Component | Technology |
-|------------|-------------|
-| Language | Java 8 + |
-| Framework | Play Framework 3.x |
-| Build Tool | sbt 1.9 + |
-| View Engine | Scala HTML templates |
-| Testing | JUnit 5 + Mockito |
-| Code Coverage | JaCoCo |
-| API | [News API v2](https://newsapi.org/docs/endpoints/everything) |
-
----
 
 ## ⚙️ Installation & Setup
 
-### 1️⃣ Prerequisites
+###  Prerequisites
 Ensure you have the following installed:
 
 | Tool | Minimum Version | Check Command |
@@ -43,13 +30,13 @@ Ensure you have the following installed:
 | sbt | 1.9 + | `sbt sbtVersion` |
 | Git | any recent | `git --version` |
 
-### 2️⃣ Clone the Repository
+### Clone the Repository
 ```bash
 git clone https://github.com/S-15-77/NotiLytics.git
 cd NotiLytics
 ```
 
-### 3️⃣ Configure the API Key
+###  Configure the API Key
 Create a free account at [newsapi.org/register](https://newsapi.org/register) and get your API key.  
 Then open **`conf/application.conf`** and add:
 ```conf
@@ -86,57 +73,4 @@ test/                    → JUnit & Mockito test classes
 build.sbt                → Build configuration
 ```
 
----
-
-## 🧪 Coding Guidelines
-- Follow **MVC** separation (no business logic in controllers).
-- Use **`CompletableFuture`** for async operations — no blocking (`.get()` / `.join()`) in main code.
-- All data processing must use **Java Streams API**.
-- Every public and private method should include **Javadoc** comments.
-- Achieve **100 % code coverage** (classes, methods, and lines) using **JaCoCo**.
-- Use mock objects (e.g., Mockito or DI) instead of calling the live API in tests.
-
----
-
-## 🧑‍🤝‍🧑 Team Members
-| Name | Student ID | Role / Feature |
-|------|-------------|----------------|
-| **Santhosh Dayakar** | 40302539 | Project Setup + Controller Integration |
-| Member 2 | … | Word Stats |
-| Member 3 | … | Sentiment Analysis |
-| Member 4 | … | Readability |
-| Member 5 | … | Source Profile |
-
----
-
-## 🌿 Branching & Contribution Guide
-1. **Clone the repo**
-   ```bash
-   git clone https://github.com/S-15-77/NotiLytics.git
-   cd NotiLytics
-   ```
-
-2. **Create a new branch** for your feature:
-   ```bash
-   git checkout -b feature/<your-feature-name>
-   ```
-
-3. **Commit changes**
-   ```bash
-   git add .
-   git commit -m "Implement <your-feature-name>"
-   ```
-
-4. **Push and create a Pull Request**
-   ```bash
-   git push origin feature/<your-feature-name>
-   ```
-    - Go to GitHub → create a **Pull Request**.
-    - Get at least one team review before merging into **main**.
-
----
-
-## 📜 License
-This project is for academic use under the **Concordia University SOEN 6441** guidelines.  
-All rights reserved © 2025 NotiLytics Team.
 
