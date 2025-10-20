@@ -1,8 +1,19 @@
 @(message: String)
 
+
 @main("NotiLytics") {
+
+
 <div style="text-align:center; margin-top:50px;">
-    <h1>@message</h1>
-    <p>This is your Play Framework setup for SOEN 6441 – Delivery 1.</p>
+    <h2>Welcome to NotiLytics</h2>
+
+    <form>
+        <textarea name="SearchInput" rows="1" cols="25" placeholder="Enter Search Terms..."></textarea>
+        <br/>
+        <button type="Go!">Go!</button>
+    </form>
+
+    <h2>@message</h2>
 </div>
+
 }
