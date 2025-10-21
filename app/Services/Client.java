@@ -1,12 +1,21 @@
 package Services;
-import play.mvc.Http.Request;
-import javax.inject.Inject;
-import play.libs.ws.*;
-import play.mvc.*;
-import java.util.concurrent.CompletionStage;
-import play.mvc.Controller;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import play.libs.ws.*;
+import javax.inject.Inject;
+import java.time.*;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.concurrent.CompletionStage;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+import models.Article;
+
+/**
+ * Service class that handles asynchronous API calls and parsing.
+ */
 public class Client implements WSBodyReadables, WSBodyWritables {
+
     private final WSClient ws;
 
     @Inject
@@ -14,13 +23,61 @@ public class Client implements WSBodyReadables, WSBodyWritables {
         this.ws = ws;
     }
 
-    public CompletionStage<String> clientRequest(String url){
-        //No longer Used
-        WSRequest request = this.ws.url(url).setRequestTimeout(5000);;
-        CompletionStage<? extends WSResponse> responsePromise = request.get();
-        return request.get()
-                .thenApply(response -> response.getBody())
-                .exceptionally(ex -> {return "Request failed: " + ex.getMessage();}); //timout case
+    /**
+     * Fetches and parses NewsAPI articles asynchronously.
+     *
+     * @param url NewsAPI request URL
+     * @return CompletionStage<List<Article>>
+     */
+    public CompletionStage<List<Article>> clientRequest(String url) {
+
+        WSRequest request = ws.url(url).setRequestTimeout(Duration.ofSeconds(5));
+
+        return request.get().thenApply(response -> {
+            if (response.getStatus() != 200) {
+                System.out.println("Error: " + response.getStatusText());
+                return Collections.emptyList();
+            }
+
+            JsonNode json = response.asJson();
+            JsonNode articlesNode = json.get("articles");
+
+            if (articlesNode == null || !articlesNode.isArray()) {
+                return Collections.emptyList();
+            }
+
+            // Parse top 10 articles with Java Streams
+            return StreamSupport.stream(articlesNode.spliterator(), false)
+                    .limit(10)
+                    .map(articleNode -> {
+                        String title = articleNode.get("title").asText("No title");
+                        String urlToArticle = articleNode.get("url").asText("#");
+                        String sourceName = articleNode.get("source").get("name").asText("Unknown Source");
+                        String sourceUrl = buildSourceUrl(sourceName);
+                        String publishedAt = convertToEDT(articleNode.get("publishedAt").asText("Unknown Date"));
+
+                        return new Article(title, urlToArticle, sourceName, sourceUrl, publishedAt);
+                    })
+                    .collect(Collectors.toList());
+
+        });
     }
-    // ...
+
+    /** Converts UTC date to EDT */
+    private String convertToEDT(String utcDate) {
+        try {
+            Instant instant = Instant.parse(utcDate);
+            ZonedDateTime edtTime = instant.atZone(ZoneId.of("America/Toronto"));
+            return edtTime.format(DateTimeFormatter.ofPattern("MMM dd yyyy, HH:mm z"));
+        } catch (Exception e) {
+            return "Unknown Date";
+        }
+    }
+
+    /** Builds a valid hyperlink for the source website */
+    private String buildSourceUrl(String sourceName) {
+        if (sourceName == null || sourceName.isEmpty()) return "#";
+        String normalized = sourceName.toLowerCase().replaceAll("\\s+", "");
+        return "https://www." + normalized + ".com";
+    }
 }

@@ -1,19 +1,45 @@
-@(message: String)
-
+@(message: String, articles: List[models.Article])
 
 @main("NotiLytics") {
-
-
 <div style="text-align:center; margin-top:50px;">
-    <h2>Welcome to NotiLytics</h2>
+    <h2><b>Welcome to NotiLytics</b></h2>
 
-    <form>
-        <textarea name="SearchInput" rows="1" cols="25" placeholder="Enter Search Terms..."></textarea>
-        <br/>
-        <button type="Go!">Go!</button>
+    <form action="@routes.HomeController.search()" method="get" style="margin-top:10px;">
+        <input type="text" name="SearchInput" placeholder="Enter search terms"
+               style="width:250px; padding:5px; font-size:14px;" required>
+
+        <button type="submit"
+                style="background-color:#007bff; color:white; border:none;
+                   padding:6px 14px; border-radius:5px; font-weight:bold;">
+            Go!
+        </button>
+
+        <br><br>
+        <div style="text-align:left; display:inline-block;">
+            <input type="radio" id="date" name="sortBy" value="publishedAt" checked>
+            <label for="date">published date</label><br>
+
+            <input type="radio" id="relevancy" name="sortBy" value="relevancy">
+            <label for="relevancy">relevancy</label><br>
+
+            <input type="radio" id="popularity" name="sortBy" value="popularity">
+            <label for="popularity">popularity</label>
+        </div>
     </form>
 
-    <h2>@message</h2>
+    <h3>@Html(message)</h3>
+    @if(articles != null && !articles.isEmpty) {
+    <hr>
+    <ul style="list-style:none; text-align:left; width:70%; margin:auto;">
+        @for(article <- articles) {
+        <li style="margin-bottom:20px;">
+            <b><a href="@article.getUrl()" target="_blank">@article.getTitle()</a></b><br>
+            Source: <a href="@article.getSourceUrl()" target="_blank">@article.getSourceName()</a><br>
+            Published: @article.getPublishedAt()
+            <hr>
+        </li>
+        }
+    </ul>
+    }
 </div>
-
 }

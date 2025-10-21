@@ -1,6 +1,7 @@
 package controllers;
 
 
+import models.Article;
 import play.mvc.*;
 import play.mvc.Http.Request;
 
@@ -13,6 +14,10 @@ import com.typesafe.config.Config;
 
 import play.libs.concurrent.HttpExecutionContext;
 import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
@@ -26,13 +31,31 @@ public class HomeController extends Controller {
    private final Config config;
    private final String Key;
    private final String url;
+    private static final String SESSION_KEY = "queries";
+
+    /** Read queries stored in user session */
+    private List<String> getPreviousQueries(Http.Session session) {
+        String data = session.getOptional(SESSION_KEY).orElse("");
+        if (data.isEmpty()) return new ArrayList<>();
+        return new ArrayList<>(Arrays.asList(data.split(",")));
+    }
+
+    /** Store new query at top, remove duplicates, keep at most 10 */
+    private Http.Session updateSession(Http.Session session, String newQuery) {
+        List<String> queries = getPreviousQueries(session);
+        queries.remove(newQuery);       // avoid duplicates
+        queries.add(0, newQuery);       // add newest at top
+        if (queries.size() > 10)        // limit 10
+            queries = queries.subList(0, 10);
+        return session.adding(SESSION_KEY, String.join(",", queries));
+    }
 
    //request look:
    //https://newsapi.org/v2/everything?q=tesla&from=2025-09-17&sortBy=publishedAt&apiKey=cab8fb494a5e4326baa696536c3f270c
    //https://newsapi.org/v2/everything?q=            CONSTANT PART
    // tesla                                          WORD QUERY (implemented)
    // &from=2025-09-17                               DATE (Unimplemented)
-   // &sortBy=publishedAt                            SORTING (Unimplemented)
+   // &sortBy=publishedAt                            SORTING
    // &apiKey=cab8fb494a5e4326baa696536c3f270c       IMPLEMENTING
 
 
@@ -48,9 +71,10 @@ public class HomeController extends Controller {
    }
 
 
+
    public CompletionStage<Result> index() {
         //Async response with a simple message
-        return CompletableFuture.supplyAsync(() -> ok(views.html.index.render("Empty")));
+        return CompletableFuture.supplyAsync(() -> ok(views.html.index.render("Empty", Collections.emptyList())));
     }
 /**
    public CompletionStage<Result> search(Request request)  {
@@ -70,18 +94,25 @@ public class HomeController extends Controller {
 
 public CompletionStage<Result> search(Http.Request request) {
     String searchInput = request.getQueryString("SearchInput");
-    //if (searchInput == null || searchInput.isEmpty()) searchInput = "latest";
-    //problem with search input finality
+    String sortBy = request.getQueryString("sortBy");
 
-    String url = this.url + "q=" + searchInput + "&apiKey=" + this.Key;
+    String url = this.url + "q=" + searchInput + "&sortBy=" + sortBy + "&apiKey=" + this.Key;
     Client client = new Client(this.ws);
 
-    // client.clientRequest returns CompletionStage<String>
-    return client.clientRequest(url)
-            .thenApplyAsync(responseBody -> {
-                // responseBody is either API result or timeout message
-                return ok(views.html.index.render("Result for: " + searchInput + "<br><br>" + responseBody));
-            }, ec.current());
+    // explicitly specify generic type to help compiler
+    CompletionStage<List<Article>> response = client.clientRequest(url);
+
+    return response.thenApplyAsync(
+            (List<Article> articles) -> {
+                String displayMessage =
+                        "Result for: <b>" + searchInput + "</b> (sorted by <i>" + sortBy + "</i>)";
+                return ok(views.html.index.render(displayMessage, articles));
+            },
+            ec.current()
+    ).exceptionally(ex -> {
+        ex.printStackTrace();
+        return internalServerError("Error fetching results: " + ex.getMessage());
+    });
 }
 
 }
