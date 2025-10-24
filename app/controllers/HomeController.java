@@ -14,6 +14,8 @@ import com.typesafe.config.Config;
 
 import play.libs.concurrent.HttpExecutionContext;
 import javax.inject.Inject;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -93,10 +95,14 @@ public class HomeController extends Controller {
  */
 
 public CompletionStage<Result> search(Http.Request request) {
+//    String searchInput = request.getQueryString("SearchInput").trim().replaceAll("\\s+", "+");
     String searchInput = request.getQueryString("SearchInput");
+
+
     String sortBy = request.getQueryString("sortBy");
 
-    String url = this.url + "q=" + searchInput + "&sortBy=" + sortBy + "&apiKey=" + this.Key;
+
+    String url = this.url + "q=" + searchInput.trim().replaceAll("\\s+", "+") + "&sortBy=" + sortBy + "&apiKey=" + this.Key;
     Client client = new Client(this.ws);
 
     // explicitly specify generic type to help compiler
