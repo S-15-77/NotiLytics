@@ -55,8 +55,10 @@ public class Client implements WSBodyReadables, WSBodyWritables {
                         String sourceName = articleNode.get("source").get("name").asText("Unknown Source");
                         String sourceUrl = buildSourceUrl(sourceName);
                         String publishedAt = convertToEDT(articleNode.get("publishedAt").asText("Unknown Date"));
+                        int kincaidGrade = 5;
+                        int readingScore = 5;
 
-                        return new Article(title, urlToArticle, sourceName, sourceUrl, publishedAt);
+                        return new Article(title, urlToArticle, sourceName, sourceUrl, publishedAt,kincaidGrade, readingScore);
                     })
                     .collect(Collectors.toList());
 
@@ -68,7 +70,7 @@ public class Client implements WSBodyReadables, WSBodyWritables {
         try {
             Instant instant = Instant.parse(utcDate);
             ZonedDateTime edtTime = instant.atZone(ZoneId.of("America/Toronto"));
-            return edtTime.format(DateTimeFormatter.ofPattern("MMM dd yyyy, HH:mm z"));
+            return edtTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd, HH:mm:ss"));
         } catch (Exception e) {
             return "Unknown Date";
         }
