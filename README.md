@@ -65,6 +65,16 @@ You should see:
 sbt test
 ```
 
+## 🧪 Running Test Cases
+
+To run all unit tests for the project:
+
+```bash
+sbt test
+```
+
+This will execute all JUnit test cases, including those for your models, controllers, and services. Make sure you have written tests for every method and class to ensure full coverage.
+
 ---
 
 ## 🧠 Project Structure
