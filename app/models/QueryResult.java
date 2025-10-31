@@ -4,7 +4,7 @@ import java.util.List;
 
 /**
  * Represents the result of a news search query, including articles and readability averages.
- * @author Team
+ * @author Santhosh
  */
 public class QueryResult {
     private final String query;
@@ -18,7 +18,7 @@ public class QueryResult {
      * @param articles List of articles returned for the query.
      * @param avgGrade Average Flesch-Kincaid Grade Level for the articles.
      * @param avgScore Average Flesch Reading Score for the articles.
-     * @author Team
+     * @author Santhosh
      */
     public QueryResult(String query, List<Article> articles, double avgGrade, double avgScore) {
         this.query = query;
@@ -30,7 +30,7 @@ public class QueryResult {
     /**
      * Gets the search query string.
      * @return The query string.
-     * @author Team
+     * @author Santhosh
      */
     public String getQuery() {
         return query;
@@ -39,7 +39,7 @@ public class QueryResult {
     /**
      * Gets the list of articles for the query.
      * @return List of articles.
-     * @author Team
+     * @author Santhosh
      */
     public List<Article> getArticles() {
         return articles;
@@ -48,7 +48,7 @@ public class QueryResult {
     /**
      * Gets the average Flesch-Kincaid Grade Level for the articles.
      * @return Average grade level.
-     * @author Team
+     * @author Santhosh
      */
     public double getAvgGrade() {
         return avgGrade;
@@ -57,7 +57,7 @@ public class QueryResult {
     /**
      * Gets the average Flesch Reading Score for the articles.
      * @return Average reading score.
-     * @author Team
+     * @author Santhosh
      */
     public double getAvgScore() {
         return avgScore;

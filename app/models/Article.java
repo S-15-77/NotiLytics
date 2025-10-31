@@ -3,7 +3,7 @@ package models;
 /**
  * Represents a single news article.
  * Group Part – NotiLytics
- * @author Team
+ * @author Santhosh
  */
 public class Article {
     /** Title of the article. */
@@ -30,7 +30,7 @@ public class Article {
      * @param publishedAt Published date.
      * @param kincaidGrade Flesch-Kincaid Grade Level.
      * @param readingScore Flesch Reading Score.
-     * @author Team
+     * @author Santhosh
      */
     public Article(String title, String url, String sourceName, String sourceUrl, String publishedAt,int kincaidGrade, int readingScore) {
         this.title = title;
@@ -45,7 +45,7 @@ public class Article {
     /**
      * Gets the title of the article.
      * @return Article title.
-     * @author Team
+     * @author Santhosh
      */
     public String getTitle() {
         return title;
@@ -54,7 +54,7 @@ public class Article {
     /**
      * Gets the URL of the article.
      * @return Article URL.
-     * @author Team
+     * @author Santhosh
      */
     public String getUrl() {
         return url;
@@ -63,7 +63,7 @@ public class Article {
     /**
      * Gets the source name.
      * @return Source name.
-     * @author Team
+     * @author Santhosh
      */
     public String getSourceName() {
         return sourceName;
@@ -72,7 +72,7 @@ public class Article {
     /**
      * Gets the source URL.
      * @return Source URL.
-     * @author Team
+     * @author Santhosh
      */
     public String getSourceUrl() {
         return sourceUrl;
@@ -81,7 +81,7 @@ public class Article {
     /**
      * Gets the published date.
      * @return Published date.
-     * @author Team
+     * @author Santhosh
      */
     public String getPublishedAt() {
         return publishedAt;
@@ -90,7 +90,7 @@ public class Article {
     /**
      * Gets the Flesch-Kincaid Grade Level.
      * @return Grade level.
-     * @author Team
+     * @author Santhosh
      */
     public int getKincaidGrade() {
         return kincaidGrade;
@@ -99,7 +99,7 @@ public class Article {
     /**
      * Gets the Flesch Reading Score.
      * @return Reading score.
-     * @author Team
+     * @author Santhosh
      */
     public int getReadingScore() {
         return readingScore;
