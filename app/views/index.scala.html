@@ -1,37 +1,38 @@
 @(message: String, resultsByQuery: java.util.Map[String, java.util.List[models.Article]])
 
+@import scala.collection.JavaConverters._
+
 @main("NotiLytics") {
 <div>
-    <h2>Welcome to NotiLytics</h2>
+    <h2>NotiLytics</h2>
 
-    <form action="@routes.HomeController.search()" method="get" >
+    <form action="@routes.HomeController.search()" method="get" style="padding:10px; border:1px solid #ddd; max-width:600px;">
         <label for="searchInput">Search:</label>
-        <input type="text" id="searchInput" name="SearchInput" placeholder="Enter search terms" required style="padding: 5px; margin: 0 10px; width: 250px;">
-        <button type="submit" style="padding: 5px 15px; background-color: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer;">Go!</button>
+        <input type="text" id="searchInput" name="SearchInput" placeholder="Enter search terms" required>
+        <button type="submit">Search</button>
 
-        <br><br>
-        <div style="margin-top: 10px;">
+        <div>
             <input type="radio" id="date" name="sortBy" value="publishedAt" checked>
-            <label for="date" style="margin-right: 15px;">published date</label><br>
+            <label for="date">published date</label>
 
             <input type="radio" id="relevancy" name="sortBy" value="relevancy">
-            <label for="relevancy" style="margin-right: 15px;">relevancy</label><br>
+            <label for="relevancy">relevancy</label>
 
             <input type="radio" id="popularity" name="sortBy" value="popularity">
-            <label for="popularity" style="margin-right: 15px;">popularity</label>
+            <label for="popularity">popularity</label>
         </div>
     </form>
 
     <h3>@Html(message)</h3>
 
     @if(resultsByQuery != null && !resultsByQuery.isEmpty()) {
-        @for((query, articles) <- resultsByQuery.asScala) {
+        @for((query, articles) <- collection.JavaConverters.mapAsScalaMap(resultsByQuery).toSeq) {
             <div>
                 <h4>Search: "@query" (10 latest results)</h4>
 
                 @if(articles != null && !articles.isEmpty()) {
                     <ul>
-                        @for((article, index) <- articles.asScala.zipWithIndex if index < 10) {
+                        @for((article, index) <- collection.JavaConverters.asScalaBuffer(articles).zipWithIndex if index < 10) {
                             <li>
                                 <strong><a href="@article.getUrl()" target="_blank">@article.getTitle()</a></strong><br>
                                 Source: <a href="@article.getSourceUrl()" target="_blank">@article.getSourceName()</a><br>

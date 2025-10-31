@@ -9,6 +9,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
+import java.util.stream.Collectors;
 import Services.Client;
 
 public class HomeController extends Controller {
@@ -21,7 +22,7 @@ public class HomeController extends Controller {
     /** Read queries stored in user session */
     private List<String> getPreviousQueries(Http.Session session) {
         String data = session.get(SESSION_KEY).orElse("");
-        if (data.isEmpty()) return new ArrayList<>();
+        if (data == null || data.isEmpty()) return new ArrayList<>();
         return new ArrayList<>(Arrays.asList(data.split(",")));
     }
 
@@ -29,7 +30,7 @@ public class HomeController extends Controller {
     private Http.Session updateSession(Http.Session session, String newQuery) {
         List<String> queries = getPreviousQueries(session);
         queries.remove(newQuery);       // avoid duplicates
-        queries.addFirst(newQuery);     // add newest at top
+        queries.add(0, newQuery);       // add newest at top (ArrayList)
         if (queries.size() > 10)        // limit 10
             queries = queries.subList(0, 10);
         return session.adding(SESSION_KEY, String.join(",", queries));
@@ -43,24 +44,22 @@ public class HomeController extends Controller {
         this.url = config.getString("newsapi.url");
     }
 
-    public CompletionStage<Result> index() {
-        return CompletableFuture.supplyAsync(() ->
-            ok(views.html.index.render("Welcome to NotiLytics! Enter your search terms below.", new LinkedHashMap<>()))
-        );
+    public CompletionStage<Result> index(Http.Request request) {
+        // show welcome page with no results
+        Map<String, List<Article>> empty = new LinkedHashMap<>();
+        return CompletableFuture.completedFuture(ok(views.html.index.render("Welcome to NotiLytics! Enter your search terms below.", empty)));
     }
 
     public CompletionStage<Result> search(Http.Request request) {
-        Optional<String> searchInputOpt = request.queryString("SearchInput");
-        Optional<String> sortByOpt = request.queryString("sortBy");
+        // Read query params from the request
+        String searchInput = request.getQueryString("SearchInput");
+        String sortBy = Optional.ofNullable(request.getQueryString("sortBy")).orElse("publishedAt");
 
-        if (searchInputOpt.isEmpty() || searchInputOpt.get().trim().isEmpty()) {
-            return CompletableFuture.completedFuture(
-                badRequest("Please enter a search term.")
-            );
+        if (searchInput == null || searchInput.trim().isEmpty()) {
+            // No search provided - render the index page (don't return badRequest text)
+            Map<String, List<Article>> empty = new LinkedHashMap<>();
+            return CompletableFuture.completedFuture(ok(views.html.index.render("Please enter a search term.", empty)));
         }
-
-        String searchInput = searchInputOpt.get();
-        String sortBy = sortByOpt.orElse("publishedAt");
 
         // Update session with new query
         Http.Session updatedSession = updateSession(request.session(), searchInput);
@@ -79,10 +78,14 @@ public class HomeController extends Controller {
                         (Map.Entry<String, List<Article>>) new AbstractMap.SimpleEntry<>(query, articles)
                     );
                 })
-                .toList();
+                .collect(Collectors.toList());
+
+        CompletableFuture<?>[] futuresArray = futures.stream()
+                .map(f -> f.toCompletableFuture())
+                .toArray(CompletableFuture[]::new);
 
         // Combine all results - each search query will be displayed separately
-        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+        return CompletableFuture.allOf(futuresArray)
                 .thenApplyAsync(v -> {
                     Map<String, List<Article>> resultsByQuery = new LinkedHashMap<>();
 
@@ -94,8 +97,6 @@ public class HomeController extends Controller {
                             System.err.println("Error fetching results for a query: " + e.getMessage());
                         }
                     }
-
-
 
                     return ok(views.html.index.render("Search Results for: " + searchInput, resultsByQuery))
                             .withSession(updatedSession);
