@@ -1,6 +1,7 @@
-@(message: String, resultsByQuery: java.util.Map[String, java.util.List[models.Article]])
+@(message: String, resultsByQuery: java.util.Map[String, models.QueryResult])
 
 @import scala.collection.JavaConverters._
+@import models.ReadabilityCalculator
 
 @main("NotiLytics") {
 <div>
@@ -26,17 +27,21 @@
     <h3>@Html(message)</h3>
 
     @if(resultsByQuery != null && !resultsByQuery.isEmpty()) {
-        @for((query, articles) <- collection.JavaConverters.mapAsScalaMap(resultsByQuery).toSeq) {
+        @for((query, result) <- collection.JavaConverters.mapAsScalaMap(resultsByQuery).toSeq) {
             <div>
                 <h4>Search: "@query" (10 latest results)</h4>
+                <p><strong>Average Flesch-Kincaid Grade Level:</strong> @result.getAvgGrade().formatted("%.2f")</p>
+                <p><strong>Average Flesch Reading Score:</strong> @result.getAvgScore().formatted("%.2f")</p>
 
-                @if(articles != null && !articles.isEmpty()) {
+                @if(result.getArticles() != null && !result.getArticles().isEmpty()) {
                     <ul>
-                        @for((article, index) <- collection.JavaConverters.asScalaBuffer(articles).zipWithIndex if index < 10) {
+                        @for((article, index) <- collection.JavaConverters.asScalaBuffer(result.getArticles()).zipWithIndex if index < 10) {
                             <li>
                                 <strong><a href="@article.getUrl()" target="_blank">@article.getTitle()</a></strong><br>
                                 Source: <a href="@article.getSourceUrl()" target="_blank">@article.getSourceName()</a><br>
-                                Published: @article.getPublishedAt()
+                                Published: @article.getPublishedAt()<br>
+                                Flesch-Kincaid Grade Level: @{ReadabilityCalculator.calculateFleschKincaidGrade(article.getTitle()).formatted("%.2f")}<br>
+                                Flesch Reading Score: @{ReadabilityCalculator.calculateFleschReadingScore(article.getTitle()).formatted("%.2f")}
                             </li>
                         }
                     </ul>

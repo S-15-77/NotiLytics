@@ -14,10 +14,18 @@ The app allows users to:
 - Extend functionality with additional analytics such as:
     - 🔤 Word frequency statistics
     - 😊 Sentiment classification (happy / sad / neutral)
-    - 📚 Readability scoring (Flesch-Kincaid)
+    - 📚 Readability scoring (Flesch-Kincaid Grade Level & Flesch Reading Score)
     - 🌐 Source profile pages
 
+### 🧮 Description Readability Feature
+For every search query, NotiLytics calculates and displays:
+- **Flesch-Kincaid Grade Level**: Indicates the U.S. school grade required to understand the article's description (lower is easier).
+- **Flesch Reading Score**: Ranges from 0–100+; higher scores mean easier reading.
+- **Average scores**: For all articles in each search, the average grade level and reading score are shown at the top of the results.
 
+These scores are computed using Java 8 Streams and are visible for each article and as an average for each search query.
+
+---
 
 ## ⚙️ Installation & Setup
 
@@ -72,5 +80,3 @@ public/                  → Static assets (CSS, JS, images)
 test/                    → JUnit & Mockito test classes
 build.sbt                → Build configuration
 ```
-
-

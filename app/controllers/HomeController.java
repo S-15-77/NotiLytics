@@ -1,6 +1,8 @@
 package controllers;
 
 import models.Article;
+import models.QueryResult;
+import models.ReadabilityCalculator;
 import play.mvc.*;
 import play.libs.ws.*;
 import com.typesafe.config.Config;
@@ -46,7 +48,7 @@ public class HomeController extends Controller {
 
     public CompletionStage<Result> index(Http.Request request) {
         // show welcome page with no results
-        Map<String, List<Article>> empty = new LinkedHashMap<>();
+        Map<String, QueryResult> empty = new LinkedHashMap<>();
         return CompletableFuture.completedFuture(ok(views.html.index.render("Welcome to NotiLytics! Enter your search terms below.", empty)));
     }
 
@@ -57,7 +59,7 @@ public class HomeController extends Controller {
 
         if (searchInput == null || searchInput.trim().isEmpty()) {
             // No search provided - render the index page (don't return badRequest text)
-            Map<String, List<Article>> empty = new LinkedHashMap<>();
+            Map<String, QueryResult> empty = new LinkedHashMap<>();
             return CompletableFuture.completedFuture(ok(views.html.index.render("Please enter a search term.", empty)));
         }
 
@@ -66,7 +68,7 @@ public class HomeController extends Controller {
         List<String> queries = getPreviousQueries(updatedSession);
 
         // Create async requests for all stored queries to display each search separately
-        List<CompletionStage<Map.Entry<String, List<Article>>>> futures = queries.stream()
+        List<CompletionStage<Map.Entry<String, QueryResult>>> futures = queries.stream()
                 .map(query -> {
                     String encodedQuery = query.trim().replaceAll("\\s+", "+");
                     String requestUrl = this.url + "q=" + encodedQuery + "&sortBy=" + sortBy + "&apiKey=" + this.Key;
@@ -74,24 +76,31 @@ public class HomeController extends Controller {
 
                     CompletionStage<List<Article>> response = client.clientRequest(requestUrl);
 
-                    return response.thenApply(articles ->
-                        (Map.Entry<String, List<Article>>) new AbstractMap.SimpleEntry<>(query, articles)
-                    );
+                    return response.thenApply(articles -> {
+                        // Get descriptions
+                        List<String> descriptions = articles.stream()
+                                .map(a -> a.getTitle() != null ? a.getTitle() : "") // Replace with a.getDescription() if available
+                                .collect(Collectors.toList());
+                        double avgGrade = ReadabilityCalculator.averageGrade(descriptions);
+                        double avgScore = ReadabilityCalculator.averageScore(descriptions);
+                        QueryResult qr = new QueryResult(query, articles, avgGrade, avgScore);
+                        return (Map.Entry<String, QueryResult>) new AbstractMap.SimpleEntry<>(query, qr);
+                    });
                 })
                 .collect(Collectors.toList());
 
         CompletableFuture<?>[] futuresArray = futures.stream()
-                .map(f -> f.toCompletableFuture())
+                .map(CompletionStage::toCompletableFuture)
                 .toArray(CompletableFuture[]::new);
 
         // Combine all results - each search query will be displayed separately
         return CompletableFuture.allOf(futuresArray)
                 .thenApplyAsync(v -> {
-                    Map<String, List<Article>> resultsByQuery = new LinkedHashMap<>();
+                    Map<String, QueryResult> resultsByQuery = new LinkedHashMap<>();
 
-                    for (CompletionStage<Map.Entry<String, List<Article>>> future : futures) {
+                    for (CompletionStage<Map.Entry<String, QueryResult>> future : futures) {
                         try {
-                            Map.Entry<String, List<Article>> entry = future.toCompletableFuture().join();
+                            Map.Entry<String, QueryResult> entry = future.toCompletableFuture().join();
                             resultsByQuery.put(entry.getKey(), entry.getValue());
                         } catch (Exception e) {
                             System.err.println("Error fetching results for a query: " + e.getMessage());
