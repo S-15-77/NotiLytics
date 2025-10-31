@@ -6,14 +6,32 @@ package models;
  * @author Team
  */
 public class Article {
+    /** Title of the article. */
     private final String title;
+    /** URL of the article. */
     private final String url;
+    /** Name of the source. */
     private final String sourceName;
+    /** URL of the source. */
     private final String sourceUrl;
+    /** Published date of the article. */
     private final String publishedAt;
+    /** Flesch-Kincaid Grade Level. */
     private final int kincaidGrade;
+    /** Flesch Reading Score. */
     private final int readingScore;
 
+    /**
+     * Constructs an Article object.
+     * @param title Title of the article.
+     * @param url URL of the article.
+     * @param sourceName Name of the source.
+     * @param sourceUrl URL of the source.
+     * @param publishedAt Published date.
+     * @param kincaidGrade Flesch-Kincaid Grade Level.
+     * @param readingScore Flesch Reading Score.
+     * @author Team
+     */
     public Article(String title, String url, String sourceName, String sourceUrl, String publishedAt,int kincaidGrade, int readingScore) {
         this.title = title;
         this.url = url;
@@ -24,28 +42,65 @@ public class Article {
         this.readingScore = readingScore;
     }
 
+    /**
+     * Gets the title of the article.
+     * @return Article title.
+     * @author Team
+     */
     public String getTitle() {
         return title;
     }
 
+    /**
+     * Gets the URL of the article.
+     * @return Article URL.
+     * @author Team
+     */
     public String getUrl() {
         return url;
     }
 
+    /**
+     * Gets the source name.
+     * @return Source name.
+     * @author Team
+     */
     public String getSourceName() {
         return sourceName;
     }
 
+    /**
+     * Gets the source URL.
+     * @return Source URL.
+     * @author Team
+     */
     public String getSourceUrl() {
         return sourceUrl;
     }
 
+    /**
+     * Gets the published date.
+     * @return Published date.
+     * @author Team
+     */
     public String getPublishedAt() {
         return publishedAt;
     }
+
+    /**
+     * Gets the Flesch-Kincaid Grade Level.
+     * @return Grade level.
+     * @author Team
+     */
     public int getKincaidGrade() {
         return kincaidGrade;
     }
+
+    /**
+     * Gets the Flesch Reading Score.
+     * @return Reading score.
+     * @author Team
+     */
     public int getReadingScore() {
         return readingScore;
     }

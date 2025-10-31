@@ -4,12 +4,27 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+/**
+ * Utility class for calculating readability metrics (Flesch-Kincaid Grade Level and Flesch Reading Score)
+ * for article descriptions using Java 8 Streams.
+ * @author Team
+ */
 public class ReadabilityCalculator {
-    // Regex patterns for sentence and word splitting
+    /**
+     * Regex pattern for sentence splitting.
+     */
     private static final Pattern SENTENCE_PATTERN = Pattern.compile("[.!?]+\s*");
+    /**
+     * Regex pattern for word splitting.
+     */
     private static final Pattern WORD_PATTERN = Pattern.compile("\\b\\w+\\b");
 
-    // Calculate Flesch-Kincaid Grade Level
+    /**
+     * Calculates the Flesch-Kincaid Grade Level for a given text.
+     * @param text The input text to analyze.
+     * @return The grade level required to understand the text.
+     * @author Team
+     */
     public static double calculateFleschKincaidGrade(String text) {
         int sentences = countSentences(text);
         int words = countWords(text);
@@ -18,7 +33,12 @@ public class ReadabilityCalculator {
         return 0.39 * ((double) words / sentences) + 11.8 * ((double) syllables / words) - 15.59;
     }
 
-    // Calculate Flesch Reading Score
+    /**
+     * Calculates the Flesch Reading Score for a given text.
+     * @param text The input text to analyze.
+     * @return The Flesch Reading Score (higher is easier).
+     * @author Team
+     */
     public static double calculateFleschReadingScore(String text) {
         int sentences = countSentences(text);
         int words = countWords(text);
@@ -27,7 +47,12 @@ public class ReadabilityCalculator {
         return 206.835 - 1.015 * ((double) words / sentences) - 84.6 * ((double) syllables / words);
     }
 
-    // Average Flesch-Kincaid Grade Level for a list of descriptions
+    /**
+     * Calculates the average Flesch-Kincaid Grade Level for a list of descriptions.
+     * @param descriptions List of article descriptions.
+     * @return The average grade level.
+     * @author Team
+     */
     public static double averageGrade(List<String> descriptions) {
         return descriptions.stream()
                 .mapToDouble(ReadabilityCalculator::calculateFleschKincaidGrade)
@@ -35,7 +60,12 @@ public class ReadabilityCalculator {
                 .orElse(0.0);
     }
 
-    // Average Flesch Reading Score for a list of descriptions
+    /**
+     * Calculates the average Flesch Reading Score for a list of descriptions.
+     * @param descriptions List of article descriptions.
+     * @return The average reading score.
+     * @author Team
+     */
     public static double averageScore(List<String> descriptions) {
         return descriptions.stream()
                 .mapToDouble(ReadabilityCalculator::calculateFleschReadingScore)
@@ -43,20 +73,35 @@ public class ReadabilityCalculator {
                 .orElse(0.0);
     }
 
-    // Count sentences using regex
+    /**
+     * Counts the number of sentences in the text.
+     * @param text The input text.
+     * @return Number of sentences.
+     * @author Team
+     */
     private static int countSentences(String text) {
         if (text == null || text.trim().isEmpty()) return 0;
         String[] sentences = SENTENCE_PATTERN.split(text.trim());
         return sentences.length;
     }
 
-    // Count words using regex
+    /**
+     * Counts the number of words in the text.
+     * @param text The input text.
+     * @return Number of words.
+     * @author Team
+     */
     private static int countWords(String text) {
         if (text == null || text.trim().isEmpty()) return 0;
         return (int) WORD_PATTERN.matcher(text).results().count();
     }
 
-    // Count syllables in all words
+    /**
+     * Counts the total number of syllables in the text.
+     * @param text The input text.
+     * @return Number of syllables.
+     * @author Team
+     */
     private static int countSyllables(String text) {
         if (text == null || text.trim().isEmpty()) return 0;
         return WORD_PATTERN.matcher(text)
@@ -66,7 +111,12 @@ public class ReadabilityCalculator {
                 .sum();
     }
 
-    // Simple syllable counting for English words
+    /**
+     * Estimates the number of syllables in a single word using a simple algorithm.
+     * @param word The word to analyze.
+     * @return Number of syllables (minimum 1).
+     * @author Team
+     */
     private static int countSyllablesInWord(String word) {
         word = word.toLowerCase().replaceAll("[^a-z]", "");
         if (word.isEmpty()) return 0;
@@ -85,4 +135,3 @@ public class ReadabilityCalculator {
         return Math.max(count, 1);
     }
 }
-

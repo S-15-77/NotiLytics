@@ -14,6 +14,11 @@ import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 import Services.Client;
 
+/**
+ * Main controller for NotiLytics web application.
+ * Handles search, session management, and result rendering.
+ * @author Team
+ */
 public class HomeController extends Controller {
     private final WSClient ws;
     private final Executor executor;
@@ -21,14 +26,25 @@ public class HomeController extends Controller {
     private final String url;
     private static final String SESSION_KEY = "queries";
 
-    /** Read queries stored in user session */
+    /**
+     * Reads queries stored in user session.
+     * @param session The HTTP session.
+     * @return List of previous queries.
+     * @author Team
+     */
     private List<String> getPreviousQueries(Http.Session session) {
         String data = session.get(SESSION_KEY).orElse("");
         if (data == null || data.isEmpty()) return new ArrayList<>();
         return new ArrayList<>(Arrays.asList(data.split(",")));
     }
 
-    /** Store new query at top, remove duplicates, keep at most 10 */
+    /**
+     * Stores new query at top, removes duplicates, keeps at most 10.
+     * @param session The HTTP session.
+     * @param newQuery The new search query.
+     * @return Updated session.
+     * @author Team
+     */
     private Http.Session updateSession(Http.Session session, String newQuery) {
         List<String> queries = getPreviousQueries(session);
         queries.remove(newQuery);       // avoid duplicates
@@ -38,6 +54,13 @@ public class HomeController extends Controller {
         return session.adding(SESSION_KEY, String.join(",", queries));
     }
 
+    /**
+     * Constructs the HomeController with dependencies.
+     * @param ws Play WSClient for HTTP requests.
+     * @param executor Executor for async tasks.
+     * @param config App configuration.
+     * @author Team
+     */
     @Inject
     public HomeController(WSClient ws, Executor executor, Config config) {
         this.ws = ws;
@@ -46,12 +69,24 @@ public class HomeController extends Controller {
         this.url = config.getString("newsapi.url");
     }
 
+    /**
+     * Renders the index page with no results.
+     * @param request The HTTP request.
+     * @return The rendered result.
+     * @author Team
+     */
     public CompletionStage<Result> index(Http.Request request) {
         // show welcome page with no results
         Map<String, QueryResult> empty = new LinkedHashMap<>();
         return CompletableFuture.completedFuture(ok(views.html.index.render("Welcome to NotiLytics! Enter your search terms below.", empty)));
     }
 
+    /**
+     * Handles search requests, fetches articles, computes readability, and renders results.
+     * @param request The HTTP request.
+     * @return The rendered result.
+     * @author Team
+     */
     public CompletionStage<Result> search(Http.Request request) {
         // Read query params from the request
         String searchInput = request.getQueryString("SearchInput");
