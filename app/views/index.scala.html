@@ -1,6 +1,4 @@
-@(message: String, resultsByQuery: java.util.Map[String, models.QueryResult])
-
-@import scala.collection.JavaConverters._
+@(message: String, resultsByQuery: java.util.Map[String, models.QueryResult], showSources: Boolean)@import scala.collection.JavaConverters._
 @import models.ReadabilityCalculator
 
 @main("NotiLytics") {
@@ -14,14 +12,20 @@
 
         <div>
             <input type="radio" id="date" name="sortBy" value="publishedAt" checked>
-            <label for="date">published date</label>
+            <label for="date">Published Date</label>
 
             <input type="radio" id="relevancy" name="sortBy" value="relevancy">
-            <label for="relevancy">relevancy</label>
+            <label for="relevancy">Relevancy</label>
 
             <input type="radio" id="popularity" name="sortBy" value="popularity">
-            <label for="popularity">popularity</label>
+            <label for="popularity">Popularity</label>
         </div>
+
+        <div style="margin-top: 10px;">
+            <input type="checkbox" name="showSources" value="true" @if(showSources){checked=""}>
+            <label for="showSources">Show Sources</label>
+        </div>
+
     </form>
 
     <h3>@Html(message)</h3>
@@ -38,8 +42,9 @@
                         @for((article, index) <- collection.JavaConverters.asScalaBuffer(result.getArticles()).zipWithIndex if index < 10) {
                             <li>
                                 <strong><a href="@article.getUrl()" target="_blank">@article.getTitle()</a></strong><br>
-                                Source: <a href="@article.getSourceUrl()" target="_blank">@article.getSourceName()</a><br>
-                                Published: @article.getPublishedAt()<br>
+                                @if(showSources) {
+                                    Source: <a href="@article.getSourceUrl()" target="_blank">@article.getSourceName()</a><br>
+                                }
                                 Flesch-Kincaid Grade Level: @{ReadabilityCalculator.calculateFleschKincaidGrade(article.getTitle()).formatted("%.2f")}<br>
                                 Flesch Reading Score: @{ReadabilityCalculator.calculateFleschReadingScore(article.getTitle()).formatted("%.2f")}
                             </li>

@@ -78,8 +78,7 @@ public class HomeController extends Controller {
     public CompletionStage<Result> index(Http.Request request) {
         // show welcome page with no results
         Map<String, QueryResult> empty = new LinkedHashMap<>();
-        return CompletableFuture.completedFuture(ok(views.html.index.render("Welcome to NotiLytics! Enter your search terms below.", empty)));
-    }
+        return CompletableFuture.completedFuture(ok(views.html.index.render("Welcome to NotiLytics! Enter your search terms below.", empty, true)));    }
 
     /**
      * Handles search requests, fetches articles, computes readability, and renders results.
@@ -92,11 +91,14 @@ public class HomeController extends Controller {
         String searchInput = request.getQueryString("SearchInput");
         String sortBy = Optional.ofNullable(request.getQueryString("sortBy")).orElse("publishedAt");
 
+        //New checks to show whether we display sources or not
+        String showSourcesParam = request.getQueryString("showSources");
+        boolean showSources = showSourcesParam != null && showSourcesParam.equals("true");
+
         if (searchInput == null || searchInput.trim().isEmpty()) {
             // No search provided - render the index page (don't return badRequest text)
             Map<String, QueryResult> empty = new LinkedHashMap<>();
-            return CompletableFuture.completedFuture(ok(views.html.index.render("Please enter a search term.", empty)));
-        }
+            return CompletableFuture.completedFuture(ok(views.html.index.render("Please enter a search term.", empty, true)));        }
 
         // Update session with new query
         Http.Session updatedSession = updateSession(request.session(), searchInput);
@@ -142,7 +144,7 @@ public class HomeController extends Controller {
                         }
                     }
 
-                    return ok(views.html.index.render("Search Results for: " + searchInput, resultsByQuery))
+                    return ok(views.html.index.render("Search Results for: " + searchInput, resultsByQuery, showSources))
                             .withSession(updatedSession);
                 }, executor)
                 .exceptionally(ex -> {
