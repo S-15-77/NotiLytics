@@ -134,15 +134,32 @@ public class HomeController extends Controller {
         // Create async requests for all stored queries to display each search separately
         String encodedQuery = searchInput.trim().replaceAll("\\s+", "+"); //This normalizes query spacing for API URL, or else we get bad API calls
 
-        String baseUrl = this.url;
-        // switch to the new top headlines endpoint when API requires it for country/category filters BUT not for language filters
-        if (filterType != null && (filterType.equals("country") || filterType.equals("category"))) {
-            baseUrl = this.topHeadlinesUrl;
+        boolean countryOrCategory = filterType != null && (filterType.equals("country") || filterType.equals("category"));
+        boolean languageFilter = filterType != null && filterType.equals("language");
+
+        String requestUrl = "";
+        if (countryOrCategory) {
+            // top-headlines: only country/category
+            String th = this.topHeadlinesUrl;
+            if (!(th.endsWith("?") || th.endsWith("&"))) th += "?";
+            requestUrl = th + filterType + "=" + filterCode;
+
+            if (!encodedQuery.isEmpty()) requestUrl += "&q=" + encodedQuery;
+
+            requestUrl += "&pageSize=10";
+            requestUrl += "&sortBy=" + sortBy; // may be ignored by API
+        } else {
+            // everything: language allowed, country/category not allowed
+            String ev = this.url;
+            if (!(ev.endsWith("?") || ev.endsWith("&"))) ev += "?";
+            requestUrl = ev + "q=" + encodedQuery;
+
+            if (languageFilter) requestUrl += "&language=" + filterCode;
+
+            requestUrl += "&sortBy=" + sortBy;
+            requestUrl += "&pageSize=10";
         }
-        String requestUrl = baseUrl + "q=" + encodedQuery + "&sortBy=" + sortBy;
-        if (filterType != null && filterCode != null) {
-            requestUrl += "&" + filterType + "=" + filterCode;
-        }
+
         requestUrl += "&apiKey=" + this.Key;
 
         //We have to create a new Client initialization to prepare tne API requests for the newest query only, and not all past ones too
