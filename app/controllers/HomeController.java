@@ -152,7 +152,12 @@ public class HomeController extends Controller {
                 });
     }
 
-
+    /**
+     * Handles retrieving the last 10 articles of a source for its Profile Page.
+     * @param sourceName the name of the selected source.
+     * @return the rendered result.
+     * @author Team
+     */
     public CompletionStage<Result> profile(String sourceName) {
 
         String encodedSource = sourceName.trim().toLowerCase();
