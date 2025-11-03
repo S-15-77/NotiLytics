@@ -3,6 +3,7 @@ package controllers;
 import models.Article;
 import models.QueryResult;
 import models.ReadabilityCalculator;
+import models.SourceProfile;
 import play.mvc.*;
 import play.libs.ws.*;
 import com.typesafe.config.Config;
@@ -150,4 +151,47 @@ public class HomeController extends Controller {
                     return internalServerError("Error fetching results: " + ex.getMessage());
                 });
     }
+
+
+    public CompletionStage<Result> profile(String sourceName) {
+
+        String encodedSource = sourceName.trim().toLowerCase();
+        String searchTerm = "domains=";
+
+        if(!encodedSource.contains(".com")) {
+            encodedSource = encodedSource.replaceAll(" ", "-");
+            searchTerm = "sources=";
+
+        }
+
+        String requestUrl = this.url + searchTerm + encodedSource + "&apiKey=" + this.Key;
+
+        Client client = new Client(this.ws);
+
+//        return CompletableFuture.failedFuture(new InternalError(requestUrl));
+
+        CompletionStage<List<Article>> response = client.clientRequest(requestUrl);
+
+        return response.thenApply(articles -> {
+
+            if (articles == null || articles.isEmpty()) {
+                return ok(views.html.sourceProfile.render(
+                        new SourceProfile(sourceName, "", "No Articles Found for this source at this time. Please try again later!"),
+                        new ArrayList<>()
+                ));
+            }
+
+            List<Article> last10 = articles.stream().limit(10).toList();
+
+            SourceProfile profile = new SourceProfile(
+                    sourceName,
+                    last10.get(0).getSourceUrl(),
+                    "Listing Articles from " + sourceName + "."
+            );
+
+            return ok(views.html.sourceProfile.render(profile,last10));
+        });
+    }
+
+
 }
