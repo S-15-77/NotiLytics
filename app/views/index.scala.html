@@ -1,44 +1,139 @@
-@(message: String, resultsByQuery: java.util.Map[String, models.QueryResult], showSources: Boolean)@import scala.collection.JavaConverters._
+@(message: String, resultsByQuery: java.util.Map[String, models.QueryResult], showSources: Boolean, filterValue: String)
+
+@import scala.collection.JavaConverters._
 @import models.ReadabilityCalculator
 
 @main("NotiLytics") {
-<div>
-    <h2>NotiLytics</h2>
+    <div>
+        <h2>NotiLytics</h2>
 
-    <form action="@routes.HomeController.search()" method="get" style="padding:10px; border:1px solid #ddd; max-width:600px;">
-        <label for="searchInput">Search:</label>
-        <input type="text" id="searchInput" name="SearchInput" placeholder="Enter search terms" required>
-        <button type="submit">Search</button>
+        <form action="@routes.HomeController.search()" method="get" style="padding:10px; border:1px solid #ddd; max-width:600px;">
+            <label for="searchInput">Search:</label>
+            <input type="text" id="searchInput" name="SearchInput" placeholder="Enter search terms" required>
+            <button type="submit">Search</button>
 
-        <div>
-            <input type="radio" id="date" name="sortBy" value="publishedAt" checked>
-            <label for="date">Published Date</label>
-
-            <input type="radio" id="relevancy" name="sortBy" value="relevancy">
-            <label for="relevancy">Relevancy</label>
-
-            <input type="radio" id="popularity" name="sortBy" value="popularity">
-            <label for="popularity">Popularity</label>
-        </div>
-
-        <div style="margin-top: 10px;">
-            <input type="checkbox" name="showSources" value="true" @if(showSources){checked=""}>
-            <label for="showSources">Show Sources</label>
-        </div>
-
-    </form>
-
-    <h3>@Html(message)</h3>
-
-    @if(resultsByQuery != null && !resultsByQuery.isEmpty()) {
-        @for((query, result) <- collection.JavaConverters.mapAsScalaMap(resultsByQuery).toSeq) {
             <div>
-                <h4>Search: "@query" (10 latest results)</h4>
-                <p><strong>Average Flesch-Kincaid Grade Level:</strong> @result.getAvgGrade().formatted("%.2f")</p>
-                <p><strong>Average Flesch Reading Score:</strong> @result.getAvgScore().formatted("%.2f")</p>
+                <input type="radio" id="date" name="sortBy" value="publishedAt" checked>
+                <label for="date">Published Date</label>
 
-                @if(result.getArticles() != null && !result.getArticles().isEmpty()) {
-                    <ul>
+                <input type="radio" id="relevancy" name="sortBy" value="relevancy">
+                <label for="relevancy">Relevancy</label>
+
+                <input type="radio" id="popularity" name="sortBy" value="popularity">
+                <label for="popularity">Popularity</label>
+            </div>
+
+            <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
+                <div>
+                    <input type="checkbox" id="showSources" name="showSources" value="true" @if(showSources){checked=""}>
+                    <label for="showSources">Show sources</label>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <label for="filterValue">Filter by:</label>
+                    <select id="filterValue" name="filterValue">
+                        <option value="" @if(filterValue.isEmpty()){selected=""}>None</option>
+
+                        <optgroup label="─── Country ───">
+                            <option value="country:ae" @if(filterValue.equals("country:ae")){selected=""}>UAE</option>
+                            <option value="country:ar" @if(filterValue.equals("country:ar")){selected=""}>Argentina</option>
+                            <option value="country:at" @if(filterValue.equals("country:at")){selected=""}>Austria</option>
+                            <option value="country:au" @if(filterValue.equals("country:au")){selected=""}>Australia</option>
+                            <option value="country:be" @if(filterValue.equals("country:be")){selected=""}>Belgium</option>
+                            <option value="country:bg" @if(filterValue.equals("country:bg")){selected=""}>Bulgaria</option>
+                            <option value="country:br" @if(filterValue.equals("country:br")){selected=""}>Brazil</option>
+                            <option value="country:ca" @if(filterValue.equals("country:ca")){selected=""}>Canada</option>
+                            <option value="country:ch" @if(filterValue.equals("country:ch")){selected=""}>Switzerland</option>
+                            <option value="country:cn" @if(filterValue.equals("country:cn")){selected=""}>China</option>
+                            <option value="country:co" @if(filterValue.equals("country:co")){selected=""}>Colombia</option>
+                            <option value="country:cu" @if(filterValue.equals("country:cu")){selected=""}>Cuba</option>
+                            <option value="country:cz" @if(filterValue.equals("country:cz")){selected=""}>Czech Republic</option>
+                            <option value="country:de" @if(filterValue.equals("country:de")){selected=""}>Germany</option>
+                            <option value="country:eg" @if(filterValue.equals("country:eg")){selected=""}>Egypt</option>
+                            <option value="country:fr" @if(filterValue.equals("country:fr")){selected=""}>France</option>
+                            <option value="country:gb" @if(filterValue.equals("country:gb")){selected=""}>United Kingdom</option>
+                            <option value="country:gr" @if(filterValue.equals("country:gr")){selected=""}>Greece</option>
+                            <option value="country:hk" @if(filterValue.equals("country:hk")){selected=""}>Hong Kong</option>
+                            <option value="country:hu" @if(filterValue.equals("country:hu")){selected=""}>Hungary</option>
+                            <option value="country:id" @if(filterValue.equals("country:id")){selected=""}>Indonesia</option>
+                            <option value="country:ie" @if(filterValue.equals("country:ie")){selected=""}>Ireland</option>
+                            <option value="country:il" @if(filterValue.equals("country:il")){selected=""}>Israel</option>
+                            <option value="country:in" @if(filterValue.equals("country:in")){selected=""}>India</option>
+                            <option value="country:it" @if(filterValue.equals("country:it")){selected=""}>Italy</option>
+                            <option value="country:jp" @if(filterValue.equals("country:jp")){selected=""}>Japan</option>
+                            <option value="country:kr" @if(filterValue.equals("country:kr")){selected=""}>South Korea</option>
+                            <option value="country:lt" @if(filterValue.equals("country:lt")){selected=""}>Lithuania</option>
+                            <option value="country:lv" @if(filterValue.equals("country:lv")){selected=""}>Latvia</option>
+                            <option value="country:ma" @if(filterValue.equals("country:ma")){selected=""}>Morocco</option>
+                            <option value="country:mx" @if(filterValue.equals("country:mx")){selected=""}>Mexico</option>
+                            <option value="country:my" @if(filterValue.equals("country:my")){selected=""}>Malaysia</option>
+                            <option value="country:ng" @if(filterValue.equals("country:ng")){selected=""}>Nigeria</option>
+                            <option value="country:nl" @if(filterValue.equals("country:nl")){selected=""}>Netherlands</option>
+                            <option value="country:no" @if(filterValue.equals("country:no")){selected=""}>Norway</option>
+                            <option value="country:nz" @if(filterValue.equals("country:nz")){selected=""}>New Zealand</option>
+                            <option value="country:ph" @if(filterValue.equals("country:ph")){selected=""}>Philippines</option>
+                            <option value="country:pl" @if(filterValue.equals("country:pl")){selected=""}>Poland</option>
+                            <option value="country:pt" @if(filterValue.equals("country:pt")){selected=""}>Portugal</option>
+                            <option value="country:ro" @if(filterValue.equals("country:ro")){selected=""}>Romania</option>
+                            <option value="country:rs" @if(filterValue.equals("country:rs")){selected=""}>Serbia</option>
+                            <option value="country:ru" @if(filterValue.equals("country:ru")){selected=""}>Russia</option>
+                            <option value="country:sa" @if(filterValue.equals("country:sa")){selected=""}>Saudi Arabia</option>
+                            <option value="country:se" @if(filterValue.equals("country:se")){selected=""}>Sweden</option>
+                            <option value="country:sg" @if(filterValue.equals("country:sg")){selected=""}>Singapore</option>
+                            <option value="country:si" @if(filterValue.equals("country:si")){selected=""}>Slovenia</option>
+                            <option value="country:sk" @if(filterValue.equals("country:sk")){selected=""}>Slovakia</option>
+                            <option value="country:th" @if(filterValue.equals("country:th")){selected=""}>Thailand</option>
+                            <option value="country:tr" @if(filterValue.equals("country:tr")){selected=""}>Turkey</option>
+                            <option value="country:tw" @if(filterValue.equals("country:tw")){selected=""}>Taiwan</option>
+                            <option value="country:ua" @if(filterValue.equals("country:ua")){selected=""}>Ukraine</option>
+                            <option value="country:us" @if(filterValue.equals("country:us")){selected=""}>United States</option>
+                            <option value="country:ve" @if(filterValue.equals("country:ve")){selected=""}>Venezuela</option>
+                            <option value="country:za" @if(filterValue.equals("country:za")){selected=""}>South Africa</option>
+                        </optgroup>
+
+                        <optgroup label="─── Category ───">
+                            <option value="category:business" @if(filterValue.equals("category:business")){selected=""}>Business</option>
+                            <option value="category:entertainment" @if(filterValue.equals("category:entertainment")){selected=""}>Entertainment</option>
+                            <option value="category:general" @if(filterValue.equals("category:general")){selected=""}>General</option>
+                            <option value="category:health" @if(filterValue.equals("category:health")){selected=""}>Health</option>
+                            <option value="category:science" @if(filterValue.equals("category:science")){selected=""}>Science</option>
+                            <option value="category:sports" @if(filterValue.equals("category:sports")){selected=""}>Sports</option>
+                            <option value="category:technology" @if(filterValue.equals("category:technology")){selected=""}>Technology</option>
+                        </optgroup>
+
+                        <optgroup label="─── Language ───">
+                            <option value="language:ar" @if(filterValue.equals("language:ar")){selected=""}>Arabic</option>
+                            <option value="language:de" @if(filterValue.equals("language:de")){selected=""}>German</option>
+                            <option value="language:en" @if(filterValue.equals("language:en")){selected=""}>English</option>
+                            <option value="language:es" @if(filterValue.equals("language:es")){selected=""}>Spanish</option>
+                            <option value="language:fr" @if(filterValue.equals("language:fr")){selected=""}>French</option>
+                            <option value="language:he" @if(filterValue.equals("language:he")){selected=""}>Hebrew</option>
+                            <option value="language:it" @if(filterValue.equals("language:it")){selected=""}>Italian</option>
+                            <option value="language:nl" @if(filterValue.equals("language:nl")){selected=""}>Dutch</option>
+                            <option value="language:no" @if(filterValue.equals("language:no")){selected=""}>Norwegian</option>
+                            <option value="language:pt" @if(filterValue.equals("language:pt")){selected=""}>Portuguese</option>
+                            <option value="language:ru" @if(filterValue.equals("language:ru")){selected=""}>Russian</option>
+                            <option value="language:sv" @if(filterValue.equals("language:sv")){selected=""}>Swedish</option>
+                            <option value="language:ud" @if(filterValue.equals("language:ud")){selected=""}>Urdu</option>
+                            <option value="language:zh" @if(filterValue.equals("language:zh")){selected=""}>Chinese</option>
+                        </optgroup>
+                    </select>
+                </div>
+            </div>
+
+        </form>
+
+        <h3>@Html(message)</h3>
+
+        @if(resultsByQuery != null && !resultsByQuery.isEmpty()) {
+            @for((query, result) <- collection.JavaConverters.mapAsScalaMap(resultsByQuery).toSeq) {
+                <div>
+                    <h4>Search: "@query" (10 latest results)</h4>
+                    <p><strong>Average Flesch-Kincaid Grade Level:</strong> @result.getAvgGrade().formatted("%.2f")</p>
+                    <p><strong>Average Flesch Reading Score:</strong> @result.getAvgScore().formatted("%.2f")</p>
+
+                    @if(result.getArticles() != null && !result.getArticles().isEmpty()) {
+                        <ul>
                         @for((article, index) <- collection.JavaConverters.asScalaBuffer(result.getArticles()).zipWithIndex if index < 10) {
                             <li>
                                 <strong><a href="@article.getUrl()" target="_blank">@article.getTitle()</a></strong><br>
@@ -49,17 +144,17 @@
                                 Flesch Reading Score: @{ReadabilityCalculator.calculateFleschReadingScore(article.getTitle()).formatted("%.2f")}
                             </li>
                         }
-                    </ul>
-                } else {
-                    <p>No results found for this search query.</p>
-                }
-                <hr>
+                        </ul>
+                    } else {
+                        <p>No results found for this search query.</p>
+                    }
+                    <hr>
+                </div>
+            }
+        } else {
+            <div>
+                <p>Enter a search term above to find the latest news articles!</p>
             </div>
         }
-    } else {
-        <div>
-            <p>Enter a search term above to find the latest news articles!</p>
-        </div>
-    }
-</div>
+    </div>
 }

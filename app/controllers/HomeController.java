@@ -24,6 +24,11 @@ public class HomeController extends Controller {
     private final Executor executor;
     private final String Key;
     private final String url;
+    private final String topHeadlinesUrl;
+    //We have to move to an in memory cache because if not we recall every single past query with the new filters applied.
+    //Or else this maxes out calls toq the API for country or category, as it uses a different link "top headlines" (see application.conf)
+    private final Map<String, QueryResult> cache = new LinkedHashMap<>();
+
     private static final String SESSION_KEY = "queries";
 
     /**
@@ -67,6 +72,7 @@ public class HomeController extends Controller {
         this.executor = executor;
         this.Key = config.getString("newsapi.key");
         this.url = config.getString("newsapi.url");
+        this.topHeadlinesUrl = config.getString("newsapi.topheadlines.url");
     }
 
     /**
@@ -78,7 +84,8 @@ public class HomeController extends Controller {
     public CompletionStage<Result> index(Http.Request request) {
         // show welcome page with no results
         Map<String, QueryResult> empty = new LinkedHashMap<>();
-        return CompletableFuture.completedFuture(ok(views.html.index.render("Welcome to NotiLytics! Enter your search terms below.", empty, true)));    }
+        return CompletableFuture.completedFuture(ok(views.html.index.render("Welcome to NotiLytics! Enter your search terms below.", empty, true, "")));
+    }
 
     /**
      * Handles search requests, fetches articles, computes readability, and renders results.
@@ -95,61 +102,77 @@ public class HomeController extends Controller {
         String showSourcesParam = request.getQueryString("showSources");
         boolean showSources = showSourcesParam != null && showSourcesParam.equals("true");
 
+        //Read filter parameter and parse it through the drop down menus
+        String filterValue = request.getQueryString("filterValue");
+        final String filterType;
+        final String filterCode;
+
+        if (filterValue != null && !filterValue.isEmpty()) {
+            String[] parts = filterValue.split(":");
+            if (parts.length == 2) {
+                filterType = parts[0];  // "country", "category", or "language"
+                filterCode = parts[1];   // "us", "sports", "en", etc.
+            } else {
+                filterType = null;
+                filterCode = null;
+            }
+        } else {
+            filterType = null;
+            filterCode = null;
+        }
+
         if (searchInput == null || searchInput.trim().isEmpty()) {
             // No search provided - render the index page (don't return badRequest text)
             Map<String, QueryResult> empty = new LinkedHashMap<>();
-            return CompletableFuture.completedFuture(ok(views.html.index.render("Please enter a search term.", empty, true)));        }
+            return CompletableFuture.completedFuture(ok(views.html.index.render("Please enter a search term.", empty, true, "")));
+        }
 
         // Update session with new query
         Http.Session updatedSession = updateSession(request.session(), searchInput);
         List<String> queries = getPreviousQueries(updatedSession);
 
         // Create async requests for all stored queries to display each search separately
-        List<CompletionStage<Map.Entry<String, QueryResult>>> futures = queries.stream()
-                .map(query -> {
-                    String encodedQuery = query.trim().replaceAll("\\s+", "+");
-                    String requestUrl = this.url + "q=" + encodedQuery + "&sortBy=" + sortBy + "&apiKey=" + this.Key;
-                    Client client = new Client(this.ws);
+        String encodedQuery = searchInput.trim().replaceAll("\\s+", "+"); //This normalizes query spacing for API URL, or else we get bad API calls
 
-                    CompletionStage<List<Article>> response = client.clientRequest(requestUrl);
+        String baseUrl = this.url;
+        // switch to the new top headlines endpoint when API requires it for country/category filters BUT not for language filters
+        if (filterType != null && (filterType.equals("country") || filterType.equals("category"))) {
+            baseUrl = this.topHeadlinesUrl;
+        }
+        String requestUrl = baseUrl + "q=" + encodedQuery + "&sortBy=" + sortBy;
+        if (filterType != null && filterCode != null) {
+            requestUrl += "&" + filterType + "=" + filterCode;
+        }
+        requestUrl += "&apiKey=" + this.Key;
 
-                    return response.thenApply(articles -> {
-                        // Get descriptions
-                        List<String> descriptions = articles.stream()
-                                .map(a -> a.getTitle() != null ? a.getTitle() : "") // Replace with a.getDescription() if available
-                                .collect(Collectors.toList());
-                        double avgGrade = ReadabilityCalculator.averageGrade(descriptions);
-                        double avgScore = ReadabilityCalculator.averageScore(descriptions);
-                        QueryResult qr = new QueryResult(query, articles, avgGrade, avgScore);
-                        return (Map.Entry<String, QueryResult>) new AbstractMap.SimpleEntry<>(query, qr);
-                    });
-                })
-                .collect(Collectors.toList());
+        //We have to create a new Client initialization to prepare tne API requests for the newest query only, and not all past ones too
+        Client client = new Client(this.ws);
+        CompletionStage<List<Article>> response = client.clientRequest(requestUrl);
 
-        CompletableFuture<?>[] futuresArray = futures.stream()
-                .map(CompletionStage::toCompletableFuture)
-                .toArray(CompletableFuture[]::new);
+        return response.thenApplyAsync(articles -> {
+            List<String> descriptions = articles.stream()
+                    .map(a -> a.getTitle() != null ? a.getTitle() : "")
+                    .collect(Collectors.toList());
+            double avgGrade = ReadabilityCalculator.averageGrade(descriptions);
+            double avgScore = ReadabilityCalculator.averageScore(descriptions);
+            QueryResult qr = new QueryResult(searchInput, articles, avgGrade, avgScore);
 
-        // Combine all results - each search query will be displayed separately
-        return CompletableFuture.allOf(futuresArray)
-                .thenApplyAsync(v -> {
-                    Map<String, QueryResult> resultsByQuery = new LinkedHashMap<>();
+            // store in cache
+            cache.put(searchInput, qr);
 
-                    for (CompletionStage<Map.Entry<String, QueryResult>> future : futures) {
-                        try {
-                            Map.Entry<String, QueryResult> entry = future.toCompletableFuture().join();
-                            resultsByQuery.put(entry.getKey(), entry.getValue());
-                        } catch (Exception e) {
-                            System.err.println("Error fetching results for a query: " + e.getMessage());
-                        }
-                    }
+            //This is to rebuild visible history strictly from cached entries (no re-requests), so that we keep the functionality given prior
+            Map<String, QueryResult> resultsByQuery = new LinkedHashMap<>();
+            for (String q : queries) {
+                QueryResult r = cache.get(q);
+                if (r != null) resultsByQuery.put(q, r); //Ensures no NullPointerException if we get a bad call when testing for example
+            }
 
-                    return ok(views.html.index.render("Search Results for: " + searchInput, resultsByQuery, showSources))
-                            .withSession(updatedSession);
-                }, executor)
-                .exceptionally(ex -> {
-                    System.err.println("Error fetching results: " + ex.getMessage());
-                    return internalServerError("Error fetching results: " + ex.getMessage());
-                });
+            return ok(views.html.index.render("Search Results for: " + searchInput, resultsByQuery, showSources, filterValue != null ? filterValue : ""))
+                    .withSession(updatedSession);
+
+        }, executor).exceptionally(ex -> {
+            System.err.println("Error fetching results: " + ex.getMessage());
+            return internalServerError("Error fetching results: " + ex.getMessage());
+        });
     }
 }
