@@ -39,7 +39,7 @@
                             <li>
                                 <strong><a href="@article.getUrl()" target="_blank">@article.getTitle()</a></strong><br>
                                 Source: <a href="@article.getSourceUrl()" target="_blank">@article.getSourceName()</a><br>
-                                <a href="@routes.HomeController.profile(article.getSourceName())">Source Profile</a><br>
+                                <a href="@routes.SourceController.profile(article.getSourceName())">Source Profile</a><br>
                                 Published: @article.getPublishedAt()<br>
                                 Flesch-Kincaid Grade Level: @{ReadabilityCalculator.calculateFleschKincaidGrade(article.getTitle()).formatted("%.2f")}<br>
                                 Flesch Reading Score: @{ReadabilityCalculator.calculateFleschReadingScore(article.getTitle()).formatted("%.2f")}
