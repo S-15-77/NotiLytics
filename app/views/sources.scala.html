@@ -1,0 +1,35 @@
+@(sources: java.util.List[models.Source])
+
+@main("News Sources - NotiLytics") {
+    <div>
+        <h2>All Available News Sources</h2>
+        <p><a href="@routes.HomeController.index()">Back to Search</a></p>
+
+        <p>Total sources: @sources.size()</p>
+
+        <table border="1" style="width:100%; border-collapse: collapse;">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Category</th>
+                    <th>Language</th>
+                    <th>Country</th>
+                    <th>URL</th>
+                </tr>
+            </thead>
+            <tbody>
+            @for(source <- collection.JavaConverters.asScalaBuffer(sources)) {
+                <tr>
+                    <td><strong>@source.getName()</strong></td>
+                    <td>@source.getDescription()</td>
+                    <td>@source.getCategory()</td>
+                    <td>@source.getLanguage()</td>
+                    <td>@source.getCountry()</td>
+                    <td><a href="@source.getUrl()" target="_blank">Visit</a></td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}
