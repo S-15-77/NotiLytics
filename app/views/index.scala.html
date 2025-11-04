@@ -1,4 +1,4 @@
-@(message: String, resultsByQuery: java.util.Map[String, models.QueryResult], showSources: Boolean, filterValue: String)
+@(message: String, resultsByQuery: java.util.Map[String, models.QueryResult], showSources: Boolean)
 
 @import controllers.ReadabilityCalculator
 
@@ -11,8 +11,6 @@
             <input type="text" id="searchInput" name="SearchInput" placeholder="Enter search terms" required>
             <button type="submit">Search</button>
 
-            <p><a href="@routes.HomeController.sources()">View All News Sources</a></p>
-
             <div>
                 <input type="radio" id="date" name="sortBy" value="publishedAt" checked>
                 <label for="date">Published Date</label>
@@ -24,105 +22,116 @@
                 <label for="popularity">Popularity</label>
             </div>
 
-            <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
+            <div style="margin-top: 10px;">
+                <input type="checkbox" id="showSources" name="showSources" value="true" @if(showSources){checked=""}>
+                <label for="showSources">Show sources</label>
+            </div>
+        </form>
+
+            <!-- Filters for Sources Page -->
+        <div style="margin-top: 20px; padding: 10px; border: 1px solid #ddd; max-width: 800px;">
+            <h3>View News Sources</h3>
+            <form action="@routes.HomeController.sources()" method="get" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+
                 <div>
-                    <input type="checkbox" id="showSources" name="showSources" value="true" @if(showSources){checked=""}>
-                    <label for="showSources">Show sources</label>
-                </div>
-
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <label for="filterValue">Filter by:</label>
-                    <select id="filterValue" name="filterValue">
-                        <option value="" @if(filterValue.isEmpty()){selected=""}>None</option>
-
-                        <optgroup label="─── Country ───">
-                            <option value="country:ae" @if(filterValue.equals("country:ae")){selected=""}>UAE</option>
-                            <option value="country:ar" @if(filterValue.equals("country:ar")){selected=""}>Argentina</option>
-                            <option value="country:at" @if(filterValue.equals("country:at")){selected=""}>Austria</option>
-                            <option value="country:au" @if(filterValue.equals("country:au")){selected=""}>Australia</option>
-                            <option value="country:be" @if(filterValue.equals("country:be")){selected=""}>Belgium</option>
-                            <option value="country:bg" @if(filterValue.equals("country:bg")){selected=""}>Bulgaria</option>
-                            <option value="country:br" @if(filterValue.equals("country:br")){selected=""}>Brazil</option>
-                            <option value="country:ca" @if(filterValue.equals("country:ca")){selected=""}>Canada</option>
-                            <option value="country:ch" @if(filterValue.equals("country:ch")){selected=""}>Switzerland</option>
-                            <option value="country:cn" @if(filterValue.equals("country:cn")){selected=""}>China</option>
-                            <option value="country:co" @if(filterValue.equals("country:co")){selected=""}>Colombia</option>
-                            <option value="country:cu" @if(filterValue.equals("country:cu")){selected=""}>Cuba</option>
-                            <option value="country:cz" @if(filterValue.equals("country:cz")){selected=""}>Czech Republic</option>
-                            <option value="country:de" @if(filterValue.equals("country:de")){selected=""}>Germany</option>
-                            <option value="country:eg" @if(filterValue.equals("country:eg")){selected=""}>Egypt</option>
-                            <option value="country:fr" @if(filterValue.equals("country:fr")){selected=""}>France</option>
-                            <option value="country:gb" @if(filterValue.equals("country:gb")){selected=""}>United Kingdom</option>
-                            <option value="country:gr" @if(filterValue.equals("country:gr")){selected=""}>Greece</option>
-                            <option value="country:hk" @if(filterValue.equals("country:hk")){selected=""}>Hong Kong</option>
-                            <option value="country:hu" @if(filterValue.equals("country:hu")){selected=""}>Hungary</option>
-                            <option value="country:id" @if(filterValue.equals("country:id")){selected=""}>Indonesia</option>
-                            <option value="country:ie" @if(filterValue.equals("country:ie")){selected=""}>Ireland</option>
-                            <option value="country:il" @if(filterValue.equals("country:il")){selected=""}>Israel</option>
-                            <option value="country:in" @if(filterValue.equals("country:in")){selected=""}>India</option>
-                            <option value="country:it" @if(filterValue.equals("country:it")){selected=""}>Italy</option>
-                            <option value="country:jp" @if(filterValue.equals("country:jp")){selected=""}>Japan</option>
-                            <option value="country:kr" @if(filterValue.equals("country:kr")){selected=""}>South Korea</option>
-                            <option value="country:lt" @if(filterValue.equals("country:lt")){selected=""}>Lithuania</option>
-                            <option value="country:lv" @if(filterValue.equals("country:lv")){selected=""}>Latvia</option>
-                            <option value="country:ma" @if(filterValue.equals("country:ma")){selected=""}>Morocco</option>
-                            <option value="country:mx" @if(filterValue.equals("country:mx")){selected=""}>Mexico</option>
-                            <option value="country:my" @if(filterValue.equals("country:my")){selected=""}>Malaysia</option>
-                            <option value="country:ng" @if(filterValue.equals("country:ng")){selected=""}>Nigeria</option>
-                            <option value="country:nl" @if(filterValue.equals("country:nl")){selected=""}>Netherlands</option>
-                            <option value="country:no" @if(filterValue.equals("country:no")){selected=""}>Norway</option>
-                            <option value="country:nz" @if(filterValue.equals("country:nz")){selected=""}>New Zealand</option>
-                            <option value="country:ph" @if(filterValue.equals("country:ph")){selected=""}>Philippines</option>
-                            <option value="country:pl" @if(filterValue.equals("country:pl")){selected=""}>Poland</option>
-                            <option value="country:pt" @if(filterValue.equals("country:pt")){selected=""}>Portugal</option>
-                            <option value="country:ro" @if(filterValue.equals("country:ro")){selected=""}>Romania</option>
-                            <option value="country:rs" @if(filterValue.equals("country:rs")){selected=""}>Serbia</option>
-                            <option value="country:ru" @if(filterValue.equals("country:ru")){selected=""}>Russia</option>
-                            <option value="country:sa" @if(filterValue.equals("country:sa")){selected=""}>Saudi Arabia</option>
-                            <option value="country:se" @if(filterValue.equals("country:se")){selected=""}>Sweden</option>
-                            <option value="country:sg" @if(filterValue.equals("country:sg")){selected=""}>Singapore</option>
-                            <option value="country:si" @if(filterValue.equals("country:si")){selected=""}>Slovenia</option>
-                            <option value="country:sk" @if(filterValue.equals("country:sk")){selected=""}>Slovakia</option>
-                            <option value="country:th" @if(filterValue.equals("country:th")){selected=""}>Thailand</option>
-                            <option value="country:tr" @if(filterValue.equals("country:tr")){selected=""}>Turkey</option>
-                            <option value="country:tw" @if(filterValue.equals("country:tw")){selected=""}>Taiwan</option>
-                            <option value="country:ua" @if(filterValue.equals("country:ua")){selected=""}>Ukraine</option>
-                            <option value="country:us" @if(filterValue.equals("country:us")){selected=""}>United States</option>
-                            <option value="country:ve" @if(filterValue.equals("country:ve")){selected=""}>Venezuela</option>
-                            <option value="country:za" @if(filterValue.equals("country:za")){selected=""}>South Africa</option>
-                        </optgroup>
-
-                        <optgroup label="─── Category ───">
-                            <option value="category:business" @if(filterValue.equals("category:business")){selected=""}>Business</option>
-                            <option value="category:entertainment" @if(filterValue.equals("category:entertainment")){selected=""}>Entertainment</option>
-                            <option value="category:general" @if(filterValue.equals("category:general")){selected=""}>General</option>
-                            <option value="category:health" @if(filterValue.equals("category:health")){selected=""}>Health</option>
-                            <option value="category:science" @if(filterValue.equals("category:science")){selected=""}>Science</option>
-                            <option value="category:sports" @if(filterValue.equals("category:sports")){selected=""}>Sports</option>
-                            <option value="category:technology" @if(filterValue.equals("category:technology")){selected=""}>Technology</option>
-                        </optgroup>
-
-                        <optgroup label="─── Language ───">
-                            <option value="language:ar" @if(filterValue.equals("language:ar")){selected=""}>Arabic</option>
-                            <option value="language:de" @if(filterValue.equals("language:de")){selected=""}>German</option>
-                            <option value="language:en" @if(filterValue.equals("language:en")){selected=""}>English</option>
-                            <option value="language:es" @if(filterValue.equals("language:es")){selected=""}>Spanish</option>
-                            <option value="language:fr" @if(filterValue.equals("language:fr")){selected=""}>French</option>
-                            <option value="language:he" @if(filterValue.equals("language:he")){selected=""}>Hebrew</option>
-                            <option value="language:it" @if(filterValue.equals("language:it")){selected=""}>Italian</option>
-                            <option value="language:nl" @if(filterValue.equals("language:nl")){selected=""}>Dutch</option>
-                            <option value="language:no" @if(filterValue.equals("language:no")){selected=""}>Norwegian</option>
-                            <option value="language:pt" @if(filterValue.equals("language:pt")){selected=""}>Portuguese</option>
-                            <option value="language:ru" @if(filterValue.equals("language:ru")){selected=""}>Russian</option>
-                            <option value="language:sv" @if(filterValue.equals("language:sv")){selected=""}>Swedish</option>
-                            <option value="language:ud" @if(filterValue.equals("language:ud")){selected=""}>Urdu</option>
-                            <option value="language:zh" @if(filterValue.equals("language:zh")){selected=""}>Chinese</option>
-                        </optgroup>
+                    <label for="countryFilter">Country:</label>
+                    <select id="countryFilter" name="country">
+                        <option value="">All</option>
+                        <option value="ae">UAE</option>
+                        <option value="ar">Argentina</option>
+                        <option value="at">Austria</option>
+                        <option value="au">Australia</option>
+                        <option value="be">Belgium</option>
+                        <option value="bg">Bulgaria</option>
+                        <option value="br">Brazil</option>
+                        <option value="ca">Canada</option>
+                        <option value="ch">Switzerland</option>
+                        <option value="cn">China</option>
+                        <option value="co">Colombia</option>
+                        <option value="cu">Cuba</option>
+                        <option value="cz">Czech Republic</option>
+                        <option value="de">Germany</option>
+                        <option value="eg">Egypt</option>
+                        <option value="fr">France</option>
+                        <option value="gb">United Kingdom</option>
+                        <option value="gr">Greece</option>
+                        <option value="hk">Hong Kong</option>
+                        <option value="hu">Hungary</option>
+                        <option value="id">Indonesia</option>
+                        <option value="ie">Ireland</option>
+                        <option value="il">Israel</option>
+                        <option value="in">India</option>
+                        <option value="it">Italy</option>
+                        <option value="jp">Japan</option>
+                        <option value="kr">South Korea</option>
+                        <option value="lt">Lithuania</option>
+                        <option value="lv">Latvia</option>
+                        <option value="ma">Morocco</option>
+                        <option value="mx">Mexico</option>
+                        <option value="my">Malaysia</option>
+                        <option value="ng">Nigeria</option>
+                        <option value="nl">Netherlands</option>
+                        <option value="no">Norway</option>
+                        <option value="nz">New Zealand</option>
+                        <option value="ph">Philippines</option>
+                        <option value="pl">Poland</option>
+                        <option value="pt">Portugal</option>
+                        <option value="ro">Romania</option>
+                        <option value="rs">Serbia</option>
+                        <option value="ru">Russia</option>
+                        <option value="sa">Saudi Arabia</option>
+                        <option value="se">Sweden</option>
+                        <option value="sg">Singapore</option>
+                        <option value="si">Slovenia</option>
+                        <option value="sk">Slovakia</option>
+                        <option value="th">Thailand</option>
+                        <option value="tr">Turkey</option>
+                        <option value="tw">Taiwan</option>
+                        <option value="ua">Ukraine</option>
+                        <option value="us">United States</option>
+                        <option value="ve">Venezuela</option>
+                        <option value="za">South Africa</option>
                     </select>
                 </div>
-            </div>
 
-        </form>
+                <div>
+                    <label for="categoryFilter">Category:</label>
+                    <select id="categoryFilter" name="category">
+                        <option value="">All</option>
+                        <option value="business">Business</option>
+                        <option value="entertainment">Entertainment</option>
+                        <option value="general">General</option>
+                        <option value="health">Health</option>
+                        <option value="science">Science</option>
+                        <option value="sports">Sports</option>
+                        <option value="technology">Technology</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="languageFilter">Language:</label>
+                    <select id="languageFilter" name="language">
+                        <option value="">All</option>
+                        <option value="ar">Arabic</option>
+                        <option value="de">German</option>
+                        <option value="en">English</option>
+                        <option value="es">Spanish</option>
+                        <option value="fr">French</option>
+                        <option value="he">Hebrew</option>
+                        <option value="it">Italian</option>
+                        <option value="nl">Dutch</option>
+                        <option value="no">Norwegian</option>
+                        <option value="pt">Portuguese</option>
+                        <option value="ru">Russian</option>
+                        <option value="sv">Swedish</option>
+                        <option value="ud">Urdu</option>
+                        <option value="zh">Chinese</option>
+                    </select>
+                </div>
+
+                <button type="submit">View Sources</button>
+            </form>
+        </div>
 
         <h3>@Html(message)</h3>
 

@@ -84,7 +84,7 @@ public class HomeController extends Controller {
     public CompletionStage<Result> index(Http.Request request) {
         // show welcome page with no results
         Map<String, QueryResult> empty = new LinkedHashMap<>();
-        return CompletableFuture.completedFuture(ok(views.html.index.render("Welcome to NotiLytics! Enter your search terms below.", empty, true, "")));
+        return CompletableFuture.completedFuture(ok(views.html.index.render("Welcome to NotiLytics! Enter your search terms below.", empty, true)));
     }
 
     /**
@@ -94,75 +94,25 @@ public class HomeController extends Controller {
      * @author Team
      */
     public CompletionStage<Result> search(Http.Request request) {
-        // Read query params from the request
         String searchInput = request.getQueryString("SearchInput");
         String sortBy = Optional.ofNullable(request.getQueryString("sortBy")).orElse("publishedAt");
 
-        //New checks to show whether we display sources or not
         String showSourcesParam = request.getQueryString("showSources");
         boolean showSources = showSourcesParam != null && showSourcesParam.equals("true");
 
-        //Read filter parameter and parse it through the drop down menus
-        String filterValue = request.getQueryString("filterValue");
-        final String filterType;
-        final String filterCode;
-
-        if (filterValue != null && !filterValue.isEmpty()) {
-            String[] parts = filterValue.split(":");
-            if (parts.length == 2) {
-                filterType = parts[0];  // "country", "category", or "language"
-                filterCode = parts[1];   // "us", "sports", "en", etc.
-            } else {
-                filterType = null;
-                filterCode = null;
-            }
-        } else {
-            filterType = null;
-            filterCode = null;
-        }
-
         if (searchInput == null || searchInput.trim().isEmpty()) {
-            // No search provided - render the index page (don't return badRequest text)
             Map<String, QueryResult> empty = new LinkedHashMap<>();
-            return CompletableFuture.completedFuture(ok(views.html.index.render("Please enter a search term.", empty, true, "")));
+            return CompletableFuture.completedFuture(ok(views.html.index.render("Please enter a search term.", empty, true)));
         }
 
-        // Update session with new query
         Http.Session updatedSession = updateSession(request.session(), searchInput);
         List<String> queries = getPreviousQueries(updatedSession);
 
-        // Create async requests for all stored queries to display each search separately
-        String encodedQuery = searchInput.trim().replaceAll("\\s+", "+"); //This normalizes query spacing for API URL, or else we get bad API calls
+        String encodedQuery = searchInput.trim().replaceAll("\\s+", "+");
 
-        boolean countryOrCategory = filterType != null && (filterType.equals("country") || filterType.equals("category"));
-        boolean languageFilter = filterType != null && filterType.equals("language");
+        // Simple URL construction without filters
+        String requestUrl = this.url + "q=" + encodedQuery + "&sortBy=" + sortBy + "&pageSize=10&apiKey=" + this.Key;
 
-        String requestUrl = "";
-        if (countryOrCategory) {
-            // top-headlines: only country/category
-            String th = this.topHeadlinesUrl;
-            if (!(th.endsWith("?") || th.endsWith("&"))) th += "?";
-            requestUrl = th + filterType + "=" + filterCode;
-
-            if (!encodedQuery.isEmpty()) requestUrl += "&q=" + encodedQuery;
-
-            requestUrl += "&pageSize=10";
-            requestUrl += "&sortBy=" + sortBy; // may be ignored by API
-        } else {
-            // everything: language allowed, country/category not allowed
-            String ev = this.url;
-            if (!(ev.endsWith("?") || ev.endsWith("&"))) ev += "?";
-            requestUrl = ev + "q=" + encodedQuery;
-
-            if (languageFilter) requestUrl += "&language=" + filterCode;
-
-            requestUrl += "&sortBy=" + sortBy;
-            requestUrl += "&pageSize=10";
-        }
-
-        requestUrl += "&apiKey=" + this.Key;
-
-        //We have to create a new Client initialization to prepare tne API requests for the newest query only, and not all past ones too
         Client client = new Client(this.ws);
         CompletionStage<List<Article>> response = client.clientRequest(requestUrl);
 
@@ -174,17 +124,15 @@ public class HomeController extends Controller {
             double avgScore = ReadabilityCalculator.averageScore(descriptions);
             QueryResult qr = new QueryResult(searchInput, articles, avgGrade, avgScore);
 
-            // store in cache
             cache.put(searchInput, qr);
 
-            //This is to rebuild visible history strictly from cached entries (no re-requests), so that we keep the functionality given prior
             Map<String, QueryResult> resultsByQuery = new LinkedHashMap<>();
             for (String q : queries) {
                 QueryResult r = cache.get(q);
-                if (r != null) resultsByQuery.put(q, r); //Ensures no NullPointerException if we get a bad call when testing for example
+                if (r != null) resultsByQuery.put(q, r);
             }
 
-            return ok(views.html.index.render("Search Results for: " + searchInput, resultsByQuery, showSources, filterValue != null ? filterValue : ""))
+            return ok(views.html.index.render("Search Results for: " + searchInput, resultsByQuery, showSources))
                     .withSession(updatedSession);
 
         }, executor).exceptionally(ex -> {
@@ -199,12 +147,32 @@ public class HomeController extends Controller {
      * @return all courses in NewsAPI
      */
     public CompletionStage<Result> sources(Http.Request request) {
+        String country = request.getQueryString("country");
+        String category = request.getQueryString("category");
+        String language = request.getQueryString("language");
+
         String requestUrl = "https://newsapi.org/v2/top-headlines/sources?apiKey=" + this.Key;
+
+        // Add filters to URL if present
+        if (country != null && !country.isEmpty()) {
+            requestUrl += "&country=" + country;
+        }
+        if (category != null && !category.isEmpty()) {
+            requestUrl += "&category=" + category;
+        }
+        if (language != null && !language.isEmpty()) {
+            requestUrl += "&language=" + language;
+        }
 
         Client client = new Client(this.ws);
 
         return client.fetchSources(requestUrl)
-                .thenApply(sources -> ok(views.html.sources.render(sources)))
+                .thenApply(sources -> ok(views.html.sources.render(
+                        sources,
+                        country != null ? country : "",
+                        category != null ? category : "",
+                        language != null ? language : ""
+                )))
                 .exceptionally(ex -> {
                     System.err.println("Error fetching sources: " + ex.getMessage());
                     return internalServerError("Error fetching sources");

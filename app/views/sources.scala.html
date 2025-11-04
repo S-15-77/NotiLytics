@@ -1,11 +1,61 @@
-@(sources: java.util.List[models.Source])
+@(sources: java.util.List[models.Source], country: String, category: String, language: String)
+
+@import scala.collection.JavaConverters._
 
 @main("News Sources - NotiLytics") {
     <div>
         <h2>All Available News Sources</h2>
         <p><a href="@routes.HomeController.index()">Back to Search</a></p>
 
-        <p>Total sources: @sources.size()</p>
+        <form method="get" style="margin: 20px 0; padding: 10px; border: 1px solid #ddd;">
+            <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
+                <div>
+                    <label for="country">Country:</label>
+                    <select id="country" name="country">
+                        <option value="" @if(country.isEmpty){selected=""}>All</option>
+                        <option value="us" @if(country.equals("us")){selected=""}>United States</option>
+                        <option value="ca" @if(country.equals("ca")){selected=""}>Canada</option>
+                        <option value="gb" @if(country.equals("gb")){selected=""}>United Kingdom</option>
+                        <option value="au" @if(country.equals("au")){selected=""}>Australia</option>
+                        <option value="de" @if(country.equals("de")){selected=""}>Germany</option>
+                        <option value="fr" @if(country.equals("fr")){selected=""}>France</option>
+                            <!-- Add more as needed -->
+                    </select>
+                </div>
+
+                <div>
+                    <label for="category">Category:</label>
+                    <select id="category" name="category">
+                        <option value="" @if(category.isEmpty){selected=""}>All</option>
+                        <option value="business" @if(category.equals("business")){selected=""}>Business</option>
+                        <option value="entertainment" @if(category.equals("entertainment")){selected=""}>Entertainment</option>
+                        <option value="general" @if(category.equals("general")){selected=""}>General</option>
+                        <option value="health" @if(category.equals("health")){selected=""}>Health</option>
+                        <option value="science" @if(category.equals("science")){selected=""}>Science</option>
+                        <option value="sports" @if(category.equals("sports")){selected=""}>Sports</option>
+                        <option value="technology" @if(category.equals("technology")){selected=""}>Technology</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="language">Language:</label>
+                    <select id="language" name="language">
+                        <option value="" @if(language.isEmpty){selected=""}>All</option>
+                        <option value="en" @if(language.equals("en")){selected=""}>English</option>
+                        <option value="es" @if(language.equals("es")){selected=""}>Spanish</option>
+                        <option value="fr" @if(language.equals("fr")){selected=""}>French</option>
+                        <option value="de" @if(language.equals("de")){selected=""}>German</option>
+                        <option value="ar" @if(language.equals("ar")){selected=""}>Arabic</option>
+                        <option value="zh" @if(language.equals("zh")){selected=""}>Chinese</option>
+                            <!-- Add more as needed -->
+                    </select>
+                </div>
+
+                <button type="submit">Filter Sources</button>
+            </div>
+        </form>
+
+        <p><strong>Total sources: @sources.size()</strong></p>
 
         <table border="1" style="width:100%; border-collapse: collapse;">
             <thead>
@@ -19,7 +69,7 @@
                 </tr>
             </thead>
             <tbody>
-            @for(source <- collection.JavaConverters.asScalaBuffer(sources)) {
+            @for(source <- asScalaBuffer(sources)) {
                 <tr>
                     <td><strong>@source.getName()</strong></td>
                     <td>@source.getDescription()</td>
