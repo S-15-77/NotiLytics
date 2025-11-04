@@ -192,4 +192,22 @@ public class HomeController extends Controller {
             return internalServerError("Error fetching results: " + ex.getMessage());
         });
     }
+
+    /**
+     * Returns all sources found in NewsAPI
+     * @param request request on where to pick up the sources
+     * @return all courses in NewsAPI
+     */
+    public CompletionStage<Result> sources(Http.Request request) {
+        String requestUrl = "https://newsapi.org/v2/top-headlines/sources?apiKey=" + this.Key;
+
+        Client client = new Client(this.ws);
+
+        return client.fetchSources(requestUrl)
+                .thenApply(sources -> ok(views.html.sources.render(sources)))
+                .exceptionally(ex -> {
+                    System.err.println("Error fetching sources: " + ex.getMessage());
+                    return internalServerError("Error fetching sources");
+                });
+    }
 }
