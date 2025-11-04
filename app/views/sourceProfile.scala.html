@@ -1,0 +1,24 @@
+@(profile: models.SourceProfile, articles: java.util.List[models.Article])
+
+@main("Source Profile") {
+<div>
+    <h2>@profile.getSourceName()</h2>
+    <p><a href="@profile.getUrl()" target="_blank">Website Link</a></p>
+    <p>@profile.getDescription()</p>
+
+    <h3>Last 10 Articles:</h3>
+    <ul>
+        @for(article <- articles) {
+        <li>
+            <strong><a href="@article.getUrl()" target="_blank">@article.getTitle()</a></strong><br>
+            Published: @article.getPublishedAt()<br>
+            Flesch-Kincaid Grade Level: @{ReadabilityCalculator.calculateFleschKincaidGrade(article.getTitle()).formatted("%.2f")}<br>
+            Flesch Reading Score: @{ReadabilityCalculator.calculateFleschReadingScore(article.getTitle()).formatted("%.2f")}<br>
+        </li>
+        }
+    </ul>
+
+    <a href="@routes.HomeController.index()">← Back to search</a>
+</div>
+
+}

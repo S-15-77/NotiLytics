@@ -1,4 +1,4 @@
-package models;
+package controllers;
 
 import java.util.List;
 import java.util.regex.Pattern;
@@ -113,7 +113,7 @@ public class ReadabilityCalculator {
     /**
      * Estimates the number of syllables in a single word using a simple algorithm.
      * @param word The word to analyze.
-     * @return Number of syllables (minimum 1).
+     * @return Number of syllables .
      * @author Santhosh
      */
     public static int countSyllablesInWord(String word) {

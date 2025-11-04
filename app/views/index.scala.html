@@ -1,7 +1,6 @@
 @(message: String, resultsByQuery: java.util.Map[String, models.QueryResult], showSources: Boolean, filterValue: String)
 
-@import scala.collection.JavaConverters._
-@import models.ReadabilityCalculator
+@import controllers.ReadabilityCalculator
 
 @main("NotiLytics") {
     <div>
@@ -140,6 +139,7 @@
                                 @if(showSources) {
                                     Source: <a href="@article.getSourceUrl()" target="_blank">@article.getSourceName()</a><br>
                                 }
+                                Published: @article.getPublishedAt()<br>
                                 Flesch-Kincaid Grade Level: @{ReadabilityCalculator.calculateFleschKincaidGrade(article.getTitle()).formatted("%.2f")}<br>
                                 Flesch Reading Score: @{ReadabilityCalculator.calculateFleschReadingScore(article.getTitle()).formatted("%.2f")}
                             </li>
