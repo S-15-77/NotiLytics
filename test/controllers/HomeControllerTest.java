@@ -1,6 +1,7 @@
 package controllers;
 
 import models.Article;
+import models.QueryResult;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -90,5 +91,37 @@ public class HomeControllerTest {
         assertEquals(OK, result.status());
         String body = contentAsString(result);
         assertTrue(body.contains("Search Results for"));
+    }
+
+    @Test
+    public void testStat() {
+        String key = "testKey";
+
+        // Create dummy articles
+        List<Article> dummyArticles = Arrays.asList(
+                new Article("Title 1", "url1", "Source 1", "https://source1.com", "2025-11-04, 12:00:00", 5, 5, "Title 1"),
+                new Article("tiTLE 2", "url2", "Source 2", "https://source2.com", "2025-11-04, 13:00:00", 5, 5, "Title 2")
+        );
+
+        // Create QueryResult
+        QueryResult qr = new QueryResult(key, dummyArticles, 5.0, 5.0);
+
+        // Populate the controller cache
+        Map<String, QueryResult> testCache = new LinkedHashMap<>();
+        testCache.put(key, qr);
+        controller.setCache(testCache); // now modifies the cache
+
+        // Build a fake request
+        Http.Request fakeRequest = fakeRequest().build();
+
+        // Call stats
+        Result result = controller.stats(fakeRequest, key);
+        // Verify results
+        assertEquals(OK, result.status());
+        String body = contentAsString(result);
+        //System.out.println(body);
+        assertTrue(body.contains("2 articles have been taken into account"));
+        assertTrue(body.contains("title:4"));
+
     }
 }

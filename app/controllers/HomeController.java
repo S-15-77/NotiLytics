@@ -3,6 +3,7 @@ package controllers;
 import models.Article;
 import models.QueryResult;
 import controllers.ReadabilityCalculator;
+import models.Statistics;
 import play.mvc.*;
 import play.libs.ws.*;
 import com.typesafe.config.Config;
@@ -27,9 +28,37 @@ public class HomeController extends Controller {
     private final String topHeadlinesUrl;
     //We have to move to an in memory cache because if not we recall every single past query with the new filters applied.
     //Or else this maxes out calls toq the API for country or category, as it uses a different link "top headlines" (see application.conf)
-    private final Map<String, QueryResult> cache = new LinkedHashMap<>();
+    Map<String, QueryResult> cache = new LinkedHashMap<>();
 
     private static final String SESSION_KEY = "queries";
+    private static final int maxArticlesVisible = 50;
+
+    /**
+     * Fetches the cache field
+     * @return the cache
+     * @author Team
+     */
+    public Map<String, QueryResult> getCache() {
+        return this.cache;
+    }
+
+    /**
+     * modifies the cache
+     * @return the cache
+     * @author Team
+     */
+    public void setCache(final Map<String, QueryResult> newCache) {
+        this.cache = newCache;
+    }
+
+    /**
+     * Fetches the maxArticlesVisible field
+     * @return the max number of articles to print on the view
+     * @author Team
+     */
+    public static int getMaxArticlesVisible() {
+        return maxArticlesVisible;
+    }
 
     /**
      * Reads queries stored in user session.
@@ -58,6 +87,24 @@ public class HomeController extends Controller {
             queries = queries.subList(0, 10);
         return session.adding(SESSION_KEY, String.join(",", queries));
     }
+
+    /**
+     * Stores new query at top, removes duplicates, keeps at most 10.
+     * @param session The HTTP session.
+     * @param newQuery The new search query.
+     * @param querySize the max number of query
+     * @return Updated session.
+     * @author Team
+     */
+    private Http.Session updateSession(Http.Session session, String newQuery, int querySize) {
+        List<String> queries = getPreviousQueries(session);
+        queries.remove(newQuery);       // avoid duplicates
+        queries.add(0, newQuery);       // add newest at top (ArrayList)
+        if (queries.size() > querySize)        // limit querySize
+            queries = queries.subList(0, querySize);
+        return session.adding(SESSION_KEY, String.join(",", queries));
+    }
+
 
     /**
      * Constructs the HomeController with dependencies.
@@ -105,13 +152,13 @@ public class HomeController extends Controller {
             return CompletableFuture.completedFuture(ok(views.html.index.render("Please enter a search term.", empty, true)));
         }
 
-        Http.Session updatedSession = updateSession(request.session(), searchInput);
+        Http.Session updatedSession = updateSession(request.session(), searchInput, getMaxArticlesVisible());
         List<String> queries = getPreviousQueries(updatedSession);
 
         String encodedQuery = searchInput.trim().replaceAll("\\s+", "+");
 
         // Simple URL construction without filters
-        String requestUrl = this.url + "q=" + encodedQuery + "&sortBy=" + sortBy + "&pageSize=10&apiKey=" + this.Key;
+        String requestUrl = this.url + "q=" + encodedQuery + "&sortBy=" + sortBy + "&pageSize="+getMaxArticlesVisible()+"&apiKey=" + this.Key;
 
         Client client = new Client(this.ws);
         CompletionStage<List<Article>> response = client.clientRequest(requestUrl);
@@ -127,9 +174,12 @@ public class HomeController extends Controller {
             cache.put(searchInput, qr);
 
             Map<String, QueryResult> resultsByQuery = new LinkedHashMap<>();
+            int count = 0; //to use with maxArticlesVisible
             for (String q : queries) {
+                if (count >= maxArticlesVisible) break;
                 QueryResult r = cache.get(q);
-                if (r != null) resultsByQuery.put(q, r);
+                if (r != null) resultsByQuery.put(q, r); //Ensures no NullPointerException if we get a bad call when testing for example
+                count++;
             }
 
             return ok(views.html.index.render("Search Results for: " + searchInput, resultsByQuery, showSources))
@@ -177,5 +227,27 @@ public class HomeController extends Controller {
                     System.err.println("Error fetching sources: " + ex.getMessage());
                     return internalServerError("Error fetching sources");
                 });
+
+
+    }
+
+    /**
+     * Handles the calculation of the word statistics for the articles.
+     * @param request The HTTP request.
+     * @param key the statistics button clicked
+     * @return The rendered result.
+     * @author Karim BG
+     */
+    public Result stats(Http.Request request, String key) {
+        Statistics s = new Statistics(cache.get(key));
+        int numberOfArticles = cache.get(key).getArticles().size();
+        List<String> TitlesAndDescription = new ArrayList<>(s.getTitles());
+        TitlesAndDescription.addAll(s.getDescriptions());
+        String counter = Statistics.getString(
+                Statistics.getCounter(
+                        Statistics.filtering(
+                                Statistics.getWords(
+                                        TitlesAndDescription))));
+        return ok("More Statistics:\n" + numberOfArticles +" articles have been taken into account.\n"+counter);
     }
 }

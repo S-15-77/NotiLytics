@@ -1,6 +1,7 @@
 package Services;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import controllers.HomeController;
 import play.libs.ws.*;
 import javax.inject.Inject;
 import java.time.*;
@@ -49,17 +50,18 @@ public class Client implements WSBodyReadables, WSBodyWritables {
 
             // Parse top 10 articles with Java Streams
             return StreamSupport.stream(articlesNode.spliterator(), false)
-                    .limit(10)
+                    .limit(HomeController.getMaxArticlesVisible())
                     .map(articleNode -> {
                         String title = articleNode.get("title").asText("No title");
                         String urlToArticle = articleNode.get("url").asText("#");
                         String sourceName = articleNode.get("source").get("name").asText("Unknown Source");
                         String sourceUrl = buildSourceUrl(sourceName);
                         String publishedAt = convertToEDT(articleNode.get("publishedAt").asText("Unknown Date"));
+                        String description = articleNode.get("description").asText("No description");
                         int kincaidGrade = 5;
                         int readingScore = 5;
 
-                        return new Article(title, urlToArticle, sourceName, sourceUrl, publishedAt,kincaidGrade, readingScore);
+                        return new Article(title, urlToArticle, sourceName, sourceUrl, publishedAt,kincaidGrade, readingScore, description);
                     })
                     .collect(Collectors.toList());
 

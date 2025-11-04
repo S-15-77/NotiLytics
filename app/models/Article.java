@@ -20,6 +20,8 @@ public class Article {
     private final int kincaidGrade;
     /** Flesch Reading Score. */
     private final int readingScore;
+    /** Article description**/
+    private final String description; //added for stats
 
     /**
      * Constructs an Article object.
@@ -32,7 +34,7 @@ public class Article {
      * @param readingScore Flesch Reading Score.
      * @author Santhosh
      */
-    public Article(String title, String url, String sourceName, String sourceUrl, String publishedAt,int kincaidGrade, int readingScore) {
+    public Article(String title, String url, String sourceName, String sourceUrl, String publishedAt,int kincaidGrade, int readingScore, String description) {
         this.title = title;
         this.url = url;
         this.sourceName = sourceName;
@@ -40,6 +42,7 @@ public class Article {
         this.publishedAt = publishedAt;
         this.kincaidGrade = kincaidGrade;
         this.readingScore = readingScore;
+        this.description = description;
     }
 
     /**
@@ -103,5 +106,14 @@ public class Article {
      */
     public int getReadingScore() {
         return readingScore;
+    }
+
+    /**
+     * Gets the description of the Article, used in the Statistics.
+     * @return A String description.
+     * @author Karim BG
+     */
+    public String getDescription() {
+        return description;
     }
 }
