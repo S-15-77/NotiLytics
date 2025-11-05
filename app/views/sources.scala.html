@@ -71,7 +71,7 @@
             <tbody>
             @for(source <- asScalaBuffer(sources)) {
                 <tr>
-                    <td><strong>@source.getName()</strong></td>
+                    <td><strong><a href="@routes.SourceController.profile(source.getName(), source.getId())">@source.getName()</a></strong></td>
                     <td>@source.getDescription()</td>
                     <td>@source.getCategory()</td>
                     <td>@source.getLanguage()</td>

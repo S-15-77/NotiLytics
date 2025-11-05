@@ -12,6 +12,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
+import java.util.concurrent.CompletableFuture;
+
 
 import static play.mvc.Results.ok;
 
@@ -35,18 +37,11 @@ public class SourceController {
      * @return the rendered result.
      * @author Team
      */
-    public CompletionStage<Result> profile(String sourceName) {
+    public CompletionStage<Result> profile(String sourceName, String id) {
+//
+//        String encodedSourceName = sourceName.trim().toLowerCase();
 
-        String encodedSource = sourceName.trim().toLowerCase();
-        String searchTerm = "domains=";
-
-        if(!encodedSource.contains(".com")) {
-            encodedSource = encodedSource.replaceAll(" ", "-");
-            searchTerm = "sources=";
-
-        }
-
-        String requestUrl = this.url + searchTerm + encodedSource + "&apiKey=" + this.Key;
+        String requestUrl = this.url + "sources=" + (id != null ? id : sourceName) + "&apiKey=" + this.Key;
 
         Client client = new Client(this.ws);
 
@@ -73,6 +68,7 @@ public class SourceController {
 
             return ok(views.html.sourceProfile.render(profile,last10));
         });
+
     }
 
 
