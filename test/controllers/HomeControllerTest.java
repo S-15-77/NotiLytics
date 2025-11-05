@@ -10,6 +10,7 @@ import play.mvc.Http;
 import play.mvc.Result;
 import com.typesafe.config.Config;
 
+import java.lang.reflect.Method;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
@@ -260,5 +261,40 @@ public class HomeControllerTest {
         controller.setCache(m);
         assertSame(m, controller.getCache());
         assertTrue(HomeController.getMaxArticlesVisible() > 0);
+    }
+
+    @Test
+    public void updateSession_truncatesWhenOverLimit_andPlacesNewQueryFirst() throws Exception {
+        // Arrange: controller with dummy deps
+        HomeController ctrl = new HomeController(
+                org.mockito.Mockito.mock(play.libs.ws.WSClient.class),
+                java.util.concurrent.Executors.newSingleThreadExecutor(),
+                org.mockito.Mockito.mock(com.typesafe.config.Config.class)
+        );
+
+        // Seed session with 12 prior queries (over the limit we'll pass: 10)
+        String seeded = String.join(",", "q1","q2","q3","q4","q5","q6","q7","q8","q9","q10","q11","q12");
+        Http.Session in = new Http.Session(Collections.singletonMap("queries", seeded));
+
+        // Access private method: updateSession(Http.Session, String, int)
+        Method m = HomeController.class.getDeclaredMethod(
+                "updateSession", Http.Session.class, String.class, int.class);
+        m.setAccessible(true);
+
+        // Act: add a new query with limit = 10
+        Http.Session out = (Http.Session) m.invoke(ctrl, in, "q13", 10);
+
+        // Assert: at most 10 queries, new query first, and order preserved for the rest
+        String stored = out.get("queries").orElse("");
+        String[] qs = stored.split(",");
+        assertEquals("Should keep exactly 10 entries", 10, qs.length);
+        assertEquals("New query must be first", "q13", qs[0]);
+
+        // Next 9 should be q1..q9 (q10+ trimmed)
+        String[] expectedTail = {"q1","q2","q3","q4","q5","q6","q7","q8","q9"};
+        for (int i = 0; i < expectedTail.length; i++) {
+            assertEquals("Order of older queries should be preserved",
+                    expectedTail[i], qs[i + 1]);
+        }
     }
 }
