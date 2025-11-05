@@ -71,21 +71,7 @@ public class HomeController extends Controller {
         return new ArrayList<>(Arrays.asList(data.split(",")));
     }
 
-    /**
-     * Stores new query at top, removes duplicates, keeps at most 10.
-     * @param session The HTTP session.
-     * @param newQuery The new search query.
-     * @return Updated session.
-     * @author Team
-     */
-    private Http.Session updateSession(Http.Session session, String newQuery) {
-        List<String> queries = getPreviousQueries(session);
-        queries.remove(newQuery);       // avoid duplicates
-        queries.add(0, newQuery);       // add newest at top (ArrayList)
-        if (queries.size() > 10)        // limit 10
-            queries = queries.subList(0, 10);
-        return session.adding(SESSION_KEY, String.join(",", queries));
-    }
+
 
     /**
      * Stores new query at top, removes duplicates, keeps at most 10.
