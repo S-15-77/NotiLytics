@@ -5,6 +5,8 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.Collections;
 import static org.junit.Assert.*;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 
 /**
  * Unit tests for ReadabilityCalculator.
@@ -116,6 +118,25 @@ public class ReadabilityCalculatorTest {
         assertTrue(ReadabilityCalculator.countSyllablesInWord("make") >= 0);
         // No vowels
         assertTrue(ReadabilityCalculator.countSyllablesInWord("rhythm") >= 0);
+    }
+    /**
+     * Test utility constructor coverage for {@link ReadabilityCalculator}.
+     * Ensures the private constructor throws an AssertionError as designed.
+     * @author Santhosh
+     */
+
+    @Test
+    public void testUtilityConstructorCoverage() throws Exception {
+        Constructor<ReadabilityCalculator> c =
+                ReadabilityCalculator.class.getDeclaredConstructor();
+        c.setAccessible(true);
+        try {
+            c.newInstance();
+            fail("Expected AssertionError");
+        } catch (InvocationTargetException e) {
+            assertTrue(e.getCause() instanceof AssertionError);
+            assertEquals("No instances", e.getCause().getMessage());
+        }
     }
 }
 

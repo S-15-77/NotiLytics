@@ -193,4 +193,72 @@ public class HomeControllerTest {
         body = contentAsString(result);
         assertTrue(body.contains("Error fetching sources"));
     }
+
+    @Test
+    public void testSearchWithShowSourcesTrue() {
+        Http.Request req = fakeRequest()
+                .method(GET)
+                .uri("/search?SearchInput=energy&sortBy=relevancy&showSources=true")
+                .build();
+
+        Result result = controller.search(req).toCompletableFuture().join();
+
+        assertEquals(OK, result.status());
+        String body = contentAsString(result);
+        assertTrue(body.contains("Search Results for: energy"));
+    }
+
+    /** Covers multi-query accumulation using session + cache (two sequential searches). */
+    @Test
+    public void testSearchAccumulatesQueriesInSessionAndCache() {
+        // 1st search — adds "alpha" to session and cache
+        Http.Request r1 = fakeRequest()
+                .method(GET)
+                .uri("/search?SearchInput=alpha&sortBy=publishedAt")
+                .build();
+        Result res1 = controller.search(r1).toCompletableFuture().join();
+        assertEquals(OK, res1.status());
+
+        // 2nd search — adds "beta" and should keep (alpha, beta) in session; results map built from cache
+        Http.Request r2 = fakeRequest()
+                .method(GET)
+                .uri("/search?SearchInput=beta&sortBy=publishedAt")
+                .build();
+        Result res2 = controller.search(r2).toCompletableFuture().join();
+        assertEquals(OK, res2.status());
+        String body2 = contentAsString(res2);
+        assertTrue(body2.contains("Search Results for: beta"));
+        // We can also sanity-check the controller cache now holds at least beta
+        assertTrue(controller.getCache().containsKey("beta"));
+    }
+
+    /** Covers the exceptionally(...) branch in search() by forcing the WS call to fail. */
+    @Test
+    public void testSearchHandlesApiFailure() {
+        // Make WSRequest.get() fail for this test only
+        CompletableFuture<WSResponse> failed = new CompletableFuture<>();
+        failed.completeExceptionally(new RuntimeException("boom"));
+        Mockito.when(mockRequest.get()).thenReturn(failed);
+
+        Http.Request req = fakeRequest()
+                .method(GET)
+                .uri("/search?SearchInput=failcase&sortBy=publishedAt")
+                .build();
+
+        Result result = controller.search(req).toCompletableFuture().join();
+
+        assertEquals(INTERNAL_SERVER_ERROR, result.status());
+        String body = contentAsString(result);
+        assertTrue(body.contains("Error fetching results"));
+    }
+
+    /** Trivial getters/setters + static accessor to close coverage gaps. */
+    @Test
+    public void testCacheGetterSetterAndMaxVisible() {
+        Map<String, QueryResult> m = new LinkedHashMap<>();
+        m.put("q", new QueryResult("q", Collections.emptyList(), 0.0, 0.0));
+        controller.setCache(m);
+        assertSame(m, controller.getCache());
+        assertTrue(HomeController.getMaxArticlesVisible() > 0);
+    }
 }

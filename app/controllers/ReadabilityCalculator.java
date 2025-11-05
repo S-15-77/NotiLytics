@@ -9,6 +9,17 @@ import java.util.regex.Pattern;
  * @author Santhosh
  */
 public class ReadabilityCalculator {
+
+    /**
+     * Private constructor to prevent instantiation of this utility class.
+     * Always throws an {@link AssertionError} to guard against accidental
+     * or reflective construction.
+     * @throws AssertionError always; this class cannot be instantiated
+     * @author Santhosh
+     */
+    private ReadabilityCalculator() {
+        throw new AssertionError("No instances");
+    }
     /**
      * Regex pattern for sentence splitting.
      */
