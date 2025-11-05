@@ -297,4 +297,27 @@ public class HomeControllerTest {
                     expectedTail[i], qs[i + 1]);
         }
     }
+
+
+    @Test
+    public void testSearch_exceptionally_returns500() {
+        // Arrange: make WSClient.get() fail to hit controller's exceptionally(...)
+        WSRequest failingRequest = Mockito.mock(WSRequest.class);
+        Mockito.when(mockWs.url(Mockito.anyString())).thenReturn(failingRequest);
+        Mockito.when(failingRequest.setRequestTimeout(Mockito.any(Duration.class))).thenReturn(failingRequest);
+
+        CompletableFuture<WSResponse> failed = new CompletableFuture<>();
+        failed.completeExceptionally(new RuntimeException("Boom"));
+        Mockito.when(failingRequest.get()).thenReturn(failed);
+
+        Http.Request fakeRequest = fakeRequest()
+                .method(GET)
+                .uri("/search?SearchInput=climate&sortBy=publishedAt")
+                .build();
+
+        Result result = controller.search(fakeRequest).toCompletableFuture().join();
+
+        assertEquals(INTERNAL_SERVER_ERROR, result.status());
+        assertTrue(contentAsString(result).contains("Error fetching results"));
+    }
 }
