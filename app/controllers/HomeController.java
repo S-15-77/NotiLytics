@@ -3,6 +3,7 @@ package controllers;
 import models.Article;
 import models.QueryResult;
 import controllers.ReadabilityCalculator;
+import models.SourceProfile;
 import models.Statistics;
 import play.mvc.*;
 import play.libs.ws.*;
@@ -234,4 +235,41 @@ public class HomeController extends Controller {
                                         TitlesAndDescription))));
         return ok("More Statistics:\n" + numberOfArticles +" articles have been taken into account.\n"+counter);
     }
+
+    /**
+     * Handles retrieving the last 10 articles of a source for its Profile Page.
+     * @param sourceName the name of the selected source.
+     * @return the rendered result.
+     * @author Haytham
+     */
+    public CompletionStage<Result> profile(String sourceName, String id) {
+
+        String requestUrl = this.url + "sources=" + (id != null ? id : sourceName) + "&apiKey=" + this.Key;
+
+        Client client = new Client(this.ws);
+
+        CompletionStage<List<Article>> response = client.clientRequest(requestUrl);
+
+        return response.thenApply(articles -> {
+
+            if (articles == null || articles.isEmpty()) {
+                return ok(views.html.sourceProfile.render(
+                        new SourceProfile(sourceName, "", "No Articles Found for this source at this time. Please try again later!"),
+                        new ArrayList<>()
+                ));
+            }
+
+            List<Article> last10 = articles.stream().limit(10).toList();
+
+            SourceProfile profile = new SourceProfile(
+                    sourceName,
+                    last10.get(0).getSourceUrl(),
+                    "Listing Articles from " + sourceName + "."
+            );
+
+            return ok(views.html.sourceProfile.render(profile,last10));
+        });
+
+    }
+
 }
