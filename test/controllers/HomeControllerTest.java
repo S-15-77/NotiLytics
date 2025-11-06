@@ -301,6 +301,7 @@ public class HomeControllerTest {
             assertTrue(body.contains("Listing Articles from BBC"));
             assertTrue(body.contains("sourceUrl1"));
         }
+    }
     @Test
     public void updateSession_truncatesWhenOverLimit_andPlacesNewQueryFirst() throws Exception {
         // Arrange: controller with dummy deps
