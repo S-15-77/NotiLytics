@@ -23,7 +23,15 @@ import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.when;
 import static play.mvc.Http.Status.OK;
 import static play.test.Helpers.*;
-
+/**
+ * Integration-style unit tests for {@link HomeController}.
+ * <p>
+ * Uses Mockito to stub Play's {@link WSClient} and related HTTP classes so that
+ * no real network calls are made. Exercises controller actions (index, search,
+ * sources, stats, profile) plus session/cache behavior and error branches to
+ * maximize JaCoCo coverage.
+ * @author Santhosh
+ */
 public class HomeControllerTest {
 
     private WSClient mockWs;
@@ -33,6 +41,17 @@ public class HomeControllerTest {
     private Executor executor;
     private HomeController controller;
 
+    /**
+     * Sets up test fixtures and default stubs:
+     * <ul>
+     *   <li>Mocks {@link WSClient}, {@link WSRequest}, and {@link WSResponse}.</li>
+     *   <li>Configures a dummy NewsAPI URL and key.</li>
+     *   <li>Stubs GET requests to return 200 OK with an empty <code>articles</code> array.</li>
+     *   <li>Builds the {@link HomeController} under test.</li>
+     * </ul>
+     * No external I/O occurs.
+     * @author Santhosh
+     */
     @Before
     public void setup() {
         // --- Mock dependencies ---
@@ -64,7 +83,12 @@ public class HomeControllerTest {
         controller = new HomeController(mockWs, executor, mockConfig);
     }
 
-    /** Test that index() renders the welcome message correctly. */
+    /**
+     * Verifies that {@link HomeController#index(play.mvc.Http.Request)} renders the
+     * landing page and contains the expected welcome text.
+     * Asserts HTTP 200 and the presence of "Welcome to NotiLytics".
+     * @author Santhosh
+     */
     @Test
     public void testIndexRendersWelcomeMessage() {
         Http.Request fakeRequest = fakeRequest().build();
@@ -74,7 +98,12 @@ public class HomeControllerTest {
         assertTrue(contentAsString(result).contains("Welcome to NotiLytics"));
     }
 
-    /** Test that empty SearchInput renders the prompt message. */
+    /**
+     * Verifies that {@link HomeController#search(play.mvc.Http.Request)} returns a
+     * prompt when the <code>SearchInput</code> parameter is missing/empty.
+     * Asserts HTTP 200 and the presence of "Please enter a search term".
+     * @author Santhosh
+     */
     @Test
     public void testSearchWithEmptyInputReturnsPrompt() {
         Http.Request fakeRequest = fakeRequest().method(GET).uri("/search").build();
@@ -84,7 +113,12 @@ public class HomeControllerTest {
         assertTrue(contentAsString(result).contains("Please enter a search term"));
     }
 
-    /** Test that valid SearchInput produces a rendered response. */
+    /**
+     * Verifies a happy-path search: a valid <code>SearchInput</code> produces a
+     * rendered result view. Uses the default stubbed WS response.
+     * Asserts HTTP 200 and that the body contains "Search Results for".
+     * @author Santhosh
+     */
     @Test
     public void testSearchWithValidInputUpdatesSession() {
         Http.Request fakeRequest = fakeRequest()
@@ -99,6 +133,17 @@ public class HomeControllerTest {
         assertTrue(body.contains("Search Results for"));
     }
 
+    /**
+     * Verifies the <code>stats</code> action using a pre-populated controller cache.
+     * Builds a {@link QueryResult} with two articles, invokes
+     * {@link HomeController#stats(play.mvc.Http.Request, String)}, and asserts:
+     * <ul>
+     *   <li>HTTP 200</li>
+     *   <li>Correct article count message</li>
+     *   <li>Presence of a known token frequency (e.g., "title:4")</li>
+     * </ul>
+     * @author Santhosh,Karim
+     */
     @Test
     public void testStat() {
         String key = "testKey";
@@ -131,7 +176,14 @@ public class HomeControllerTest {
     }
 
     /**
-     * Tests the source() method in HomeController
+     * Verifies the <code>sources</code> action for multiple filter scenarios and
+     * for an API failure branch:
+     * <ul>
+     *   <li>No filters, country=us, category=technology, language=fr</li>
+     *   <li>Simulated failing future to hit the error handler</li>
+     * </ul>
+     * Asserts HTTP 200 for success cases and 500 with "Error fetching sources" for failure.
+     * @author Hasnaou
      */
     @Test
     public void testSource() {
@@ -200,6 +252,12 @@ public class HomeControllerTest {
         assertTrue(body.contains("Error fetching sources"));
     }
 
+    /**
+     * Verifies that the <code>showSources=true</code> query parameter toggles the
+     * corresponding branch in the search action and the page renders as expected.
+     * Asserts HTTP 200 and the "Search Results for: energy" header.
+     * @author Santhosh
+     */
     @Test
     public void testSearchWithShowSourcesTrue() {
         Http.Request req = fakeRequest()
@@ -214,7 +272,15 @@ public class HomeControllerTest {
         assertTrue(body.contains("Search Results for: energy"));
     }
 
-    /** Covers multi-query accumulation using session + cache (two sequential searches). */
+    /**
+     * Covers session accumulation and cache usage across sequential searches.
+     * Performs two searches ("alpha" then "beta") and asserts:
+     * <ul>
+     *   <li>Second response includes "Search Results for: beta"</li>
+     *   <li>Controller cache contains the latest query ("beta")</li>
+     * </ul>
+     * @author Santhosh
+     */
     @Test
     public void testSearchAccumulatesQueriesInSessionAndCache() {
         // 1st search — adds "alpha" to session and cache
@@ -238,7 +304,12 @@ public class HomeControllerTest {
         assertTrue(controller.getCache().containsKey("beta"));
     }
 
-    /** Covers the exceptionally(...) branch in search() by forcing the WS call to fail. */
+    /**
+     * Forces the WS request to fail and verifies the search action’s
+     * <code>exceptionally(...)</code> path.
+     * Asserts HTTP 500 and the presence of "Error fetching results" in the body.
+     * @author Santhosh
+     */
     @Test
     public void testSearchHandlesApiFailure() {
         // Make WSRequest.get() fail for this test only
@@ -258,7 +329,15 @@ public class HomeControllerTest {
         assertTrue(body.contains("Error fetching results"));
     }
 
-    /** Trivial getters/setters + static accessor to close coverage gaps. */
+    /**
+     * Covers trivial getters/setters and the static accessor:
+     * <ul>
+     *   <li>{@link HomeController#setCache(Map)} and {@link HomeController#getCache()}</li>
+     *   <li>{@link HomeController#getMaxArticlesVisible()}</li>
+     * </ul>
+     * Ensures these code paths are executed for full coverage.
+     * @author Santhosh
+     */
     @Test
     public void testCacheGetterSetterAndMaxVisible() {
         Map<String, QueryResult> m = new LinkedHashMap<>();
@@ -269,6 +348,13 @@ public class HomeControllerTest {
     }
 
 
+    /**
+     * Verifies the <code>profile</code> action when the API returns no articles.
+     * Uses Mockito's {@link org.mockito.MockedConstruction} to return an empty list
+     * from {@link Services.Client#clientRequest(String)}.
+     * Asserts HTTP 200 and "No Articles Found for this source".
+     * @author Haytham
+     */
     @Test
     public void testProfile_NoArticles() throws ExecutionException, InterruptedException, TimeoutException {
         try(MockedConstruction<Client> mockedClient = mockConstruction(Client.class, (mock, context) -> {
@@ -283,6 +369,17 @@ public class HomeControllerTest {
         }
     }
 
+    /**
+     * Verifies the <code>profile</code> action when the API returns at least one article.
+     * Mocks {@link Services.Client} construction to return a singleton list and
+     * asserts that the response:
+     * <ul>
+     *   <li>Is HTTP 200</li>
+     *   <li>Contains "Listing Articles from BBC"</li>
+     *   <li>Includes the expected source URL</li>
+     * </ul>
+     * @author Haytham
+     */
     @Test
     public void testProfile() throws ExecutionException, InterruptedException, TimeoutException {
         Article testArticle = new Article("Title One", "url1", "Source1", "sourceUrl1", "2025-01-01, 12:00:00", 5, 5, "Description One");
@@ -302,6 +399,17 @@ public class HomeControllerTest {
             assertTrue(body.contains("sourceUrl1"));
         }
     }
+    /**
+     * Uses reflection to invoke the private three-argument
+     * <code>updateSession(Http.Session, String, int)</code> overload and verifies:
+     * <ul>
+     *   <li>The session is truncated to the specified limit (10)</li>
+     *   <li>The new query is placed at the front</li>
+     *   <li>The order of remaining items is preserved</li>
+     * </ul>
+     * This directly covers the branch that trims the stored query list.
+     * @author Santhosh
+     */
     @Test
     public void updateSession_truncatesWhenOverLimit_andPlacesNewQueryFirst() throws Exception {
         // Arrange: controller with dummy deps
@@ -337,7 +445,13 @@ public class HomeControllerTest {
         }
     }
 
-
+    /**
+     * Alternative failure-path coverage for the search action:
+     * re-stubs the WS chain so <code>get()</code> completes exceptionally, then
+     * asserts HTTP 500 and the error message. Ensures robustness against transient
+     * upstream failures.
+     * @author Santhosh
+     */
     @Test
     public void testSearch_exceptionally_returns500() {
         // Arrange: make WSClient.get() fail to hit controller's exceptionally(...)

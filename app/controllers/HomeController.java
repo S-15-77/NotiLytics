@@ -123,7 +123,7 @@ public class HomeController extends Controller {
      * Handles search requests, fetches articles, computes readability, and renders results.
      * @param request The HTTP request.
      * @return The rendered result.
-     * @author Team
+     * @author Karim , Santhosh
      */
     public CompletionStage<Result> search(Http.Request request) {
         String searchInput = request.getQueryString("SearchInput");

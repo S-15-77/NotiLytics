@@ -11,6 +11,12 @@ import static org.junit.Assert.*;
  */
 public class ArticleTest {
 
+    /**
+     * Verifies that the constructor assigns typical (non-empty) values and that
+     * every getter returns exactly what was provided, including numeric fields for
+     * readability metrics and the description.
+     * @author Santhosh
+     */
     @Test
     public void testConstructorAndGetters_WithTypicalValues() {
         Article a = new Article(
@@ -34,6 +40,12 @@ public class ArticleTest {
         assertEquals("Short description", a.getDescription());
     }
 
+    /**
+     * Verifies behavior with empty-string inputs. Ensures the object preserves
+     * empty strings as-is for all String fields and returns numeric zeros where
+     * provided.
+     * @author Santhosh
+     */
     @Test
     public void testConstructorAndGetters_WithEmptyStrings() {
         Article a = new Article(
@@ -57,6 +69,15 @@ public class ArticleTest {
         assertEquals("", a.getDescription());
     }
 
+    /**
+     * Documents and verifies behavior when <code>null</code> values are passed to
+     * String fields. Confirms getters return <code>null</code> for those fields and
+     * numeric fields reflect the provided (possibly negative) values without
+     * validation.
+     * <p>Note: If upstream code never supplies nulls, this test still clarifies the
+     * current contract and guards against accidental changes.</p>
+     * @author Santhosh
+     */
     @Test
     public void testConstructorAndGetters_WithNullables() {
         // If your code never passes nulls, you can skip this. But including it documents behavior.

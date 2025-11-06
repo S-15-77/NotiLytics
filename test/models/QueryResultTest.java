@@ -15,6 +15,12 @@ import static org.junit.Assert.*;
  */
 public class QueryResultTest {
 
+    /**
+     * Verifies that a typical, non-empty construction preserves the query string,
+     * stores the exact list reference passed to the constructor, and returns the
+     * expected average grade and score values.
+     * @author Santhosh
+     */
     @Test
     public void testConstructorAndGetters_WithTypicalValues() {
         List<Article> articles = new ArrayList<>();
@@ -40,6 +46,11 @@ public class QueryResultTest {
         assertEquals(62.5, qr.getAvgScore(), 0.0001);
     }
 
+    /**
+     * Verifies behavior when the articles list is empty: the query is preserved,
+     * the empty list reference is retained (not copied), and averages are exactly 0.0.
+     * @author Santhosh
+     */
     @Test
     public void testConstructorAndGetters_WithEmptyArticles() {
         List<Article> empty = Collections.emptyList();
@@ -52,6 +63,14 @@ public class QueryResultTest {
         assertEquals(0.0, qr.getAvgScore(), 0.0);
     }
 
+    /**
+     * Documents and checks that the constructor does not defensively copy the
+     * articles list. Mutating the original list after construction must be
+     * reflected by {@code getArticles()}, confirming shared reference semantics.
+     * <p>Note: This test encodes the current contract. If defensive copying is
+     * introduced later, update both code and test accordingly.</p>
+     * @author Santhosh
+     */
     @Test
     public void testArticlesReferenceIsNotCopied() {
         // This test documents current behavior: the list is stored as-is (no defensive copy).

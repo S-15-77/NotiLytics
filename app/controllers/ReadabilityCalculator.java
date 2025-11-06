@@ -141,7 +141,7 @@ public class ReadabilityCalculator {
             }
             prevVowel = isVowel;
         }
-        // Remove silent 'e'
+
         if (word.endsWith("e") && count > 1) {
             int len = word.length();
             boolean consonantPlusLe = len >= 3 && word.endsWith("le")
