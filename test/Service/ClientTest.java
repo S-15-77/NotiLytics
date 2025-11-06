@@ -25,9 +25,18 @@ import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 
-// Add this import so we don't hardcode the limit:
+
 import controllers.HomeController;
 
+/**
+ * Unit tests for {@link Client} that validate HTTP interaction,
+ * JSON parsing, date conversion to America/Toronto, and error paths.
+ * <p>
+ * These tests use Mockito to mock {@link WSClient}, {@link WSRequest}, and {@link WSResponse}
+ * so no real network calls are made.
+ * </p>
+ * @author Santhosh
+ */
 public class ClientTest {
 
     private WSClient mockWs;
@@ -37,6 +46,11 @@ public class ClientTest {
 
     private final ObjectMapper mapper = new ObjectMapper();
 
+    /**
+     * Prepares mocked WS objects and wires them into a {@link Client} instance.
+     * Stubs the fluent request chain {@code ws.url(...).setRequestTimeout(...)}.
+     * @author Santhosh
+     */
     @Before
     public void setUp() {
         mockWs = Mockito.mock(WSClient.class);
@@ -49,7 +63,17 @@ public class ClientTest {
         client = new Client(mockWs);
     }
 
-    // ---------- helper builders ----------
+    /**
+     * Builds a minimal NewsAPI-like JSON node for a single article.
+     * @param title        article title
+     * @param url          article URL
+     * @param sourceName   source display name
+     * @param publishedAtIso ISO-8601 UTC timestamp (e.g., {@code 2025-01-01T00:00:00Z})
+     * @param description  article description
+     * @return an {@link ObjectNode} representing an article element
+     *
+     * @author Santhosh
+     */
 
     private ObjectNode makeArticleNode(String title, String url, String sourceName, String publishedAtIso, String description) {
         ObjectNode src = mapper.createObjectNode();
@@ -64,6 +88,12 @@ public class ClientTest {
         return n;
     }
 
+    /**
+     * Builds a NewsAPI-like payload containing {@code count} articles.
+     * @param count number of articles to include
+     * @return root {@link ObjectNode} with an {@code articles} array
+     * @author Santhosh
+     */
     private ObjectNode makeArticlesPayload(int count) {
         ObjectNode root = mapper.createObjectNode();
         ArrayNode arr = mapper.createArrayNode();
@@ -79,6 +109,12 @@ public class ClientTest {
         return root;
     }
 
+    /**
+     * Builds a NewsAPI-like payload containing {@code count} sources.
+     * @param count number of sources to include
+     * @return root {@link ObjectNode} with a {@code sources} array
+     * @author Santhosh
+     */
     private ObjectNode makeSourcesPayload(int count) {
         ObjectNode root = mapper.createObjectNode();
         ArrayNode arr = mapper.createArrayNode();
@@ -97,10 +133,12 @@ public class ClientTest {
         return root;
     }
 
-    // ---------- tests for clientRequest ----------
 
     /**
-     * Verifies: 200 OK parses articles and respects the HomeController.getMaxArticlesVisible() limit.
+     * Verifies the happy path: for HTTP 200, the client parses the articles list
+     * and enforces the view limit from {@link HomeController#getMaxArticlesVisible()}.
+     * Also spot-checks a few parsed fields.
+     * @author Santhosh
      */
     @Test
     public void testClientRequest_success_parsesAndLimits() {
@@ -124,7 +162,10 @@ public class ClientTest {
     }
 
     /**
-     * Verifies the happy-path time conversion: valid ISO-8601 UTC -> formatted America/Toronto string.
+     * Verifies that a valid ISO-8601 UTC timestamp is converted to a formatted
+     * {@code America/Toronto} string {"yyyy-MM-dd, HH:mm:ss"}.
+     * Uses a fixed instant to avoid flakiness around DST.
+     * @author Santhosh
      */
     @Test
     public void testClientRequest_validIsoUtc_formatsToEdt() {
@@ -154,7 +195,8 @@ public class ClientTest {
     }
 
     /**
-     * Verifies: non-200 returns an empty list.
+     * Verifies that non-200 HTTP statuses return an empty list and do not throw.
+     * @author Santhosh
      */
     @Test
     public void testClientRequest_non200_returnsEmpty() {
@@ -168,7 +210,8 @@ public class ClientTest {
     }
 
     /**
-     * Verifies: missing or non-array "articles" returns empty list.
+     * Verifies that missing or non-array {@code articles} results in an empty list.
+     * @author Santhosh
      */
     @Test
     public void testClientRequest_missingArticles_returnsEmpty() {
@@ -183,7 +226,9 @@ public class ClientTest {
     }
 
     /**
-     * Verifies: invalid publishedAt triggers catch → "Unknown Date".
+     * Verifies the error path in date conversion: an invalid {@code publishedAt}
+     * value triggers the catch block and yields {@code "Unknown Date"}.
+     * @author Santhosh
      */
     @Test
     public void testClientRequest_invalidPublishedAt_usesUnknownDate() {
@@ -207,11 +252,10 @@ public class ClientTest {
         assertEquals(1, articles.size());
         assertEquals("Unknown Date", articles.get(0).getPublishedAt());
     }
-
-    // ---------- tests for fetchSources ----------
-
     /**
-     * Verifies: fetchSources parses multiple sources.
+     * Verifies that {@link Client#fetchSources(String)} parses multiple source
+     * objects into {@link Source} instances with expected fields.
+     * @author Santhosh
      */
     @Test
     public void testFetchSources_success_parsesList() {
@@ -229,7 +273,8 @@ public class ClientTest {
     }
 
     /**
-     * Verifies: fetchSources with missing/empty "sources" returns empty.
+     * Verifies that missing or empty {@code sources} arrays result in an empty list.
+     * @author Santhosh
      */
     @Test
     public void testFetchSources_missingOrEmpty_returnsEmpty() {
