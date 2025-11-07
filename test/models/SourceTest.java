@@ -5,11 +5,14 @@ import static org.junit.Assert.*;
 
 /**
  * Unit tests for the Source model.
- * @author Team
+ * @author Ilyes
  */
 public class SourceTest {
 
-    /** Test Source constructor and all getters. */
+
+    /**
+     * Test Source constructor and all getters
+     */
     @Test
     public void testSourceConstructorAndGetters() {
         Source source = new Source(
@@ -31,7 +34,9 @@ public class SourceTest {
         assertEquals("gb", source.getCountry());
     }
 
-    /** Test Source with null values. */
+    /**
+     * Test Source with null values.
+     */
     @Test
     public void testSourceWithNullValues() {
         Source source = new Source(
@@ -53,7 +58,9 @@ public class SourceTest {
         assertNull(source.getCountry());
     }
 
-    /** Test Source with different categories. */
+    /**
+     * Test Source with different categories
+     */
     @Test
     public void testSourceWithDifferentCategories() {
         String[] categories = {"business", "entertainment", "general", "health", "science", "sports", "technology"};
@@ -72,7 +79,9 @@ public class SourceTest {
         }
     }
 
-    /** Test Source with different languages. */
+    /**
+     * Test Source with different languages
+     */
     @Test
     public void testSourceWithDifferentLanguages() {
         String[] languages = {"ar", "de", "en", "es", "fr", "he", "it", "nl", "no", "pt", "ru", "sv", "zh"};
@@ -91,7 +100,9 @@ public class SourceTest {
         }
     }
 
-    /** Test Source with different countries. */
+    /**
+     * Test Source with different countries
+     */
     @Test
     public void testSourceWithDifferentCountries() {
         String[] countries = {"us", "ca", "gb", "au", "de", "fr", "jp", "cn"};

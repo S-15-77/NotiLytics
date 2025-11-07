@@ -146,7 +146,7 @@ public class HomeController extends Controller {
      *
      * @param request The HTTP request.
      * @return The rendered result.
-     * @author Karim , Santhosh
+     * @author Karim , Santhosh, Ilyes
      */
     public CompletionStage<Result> search(Http.Request request) {
         String searchInput = request.getQueryString("SearchInput");
@@ -205,6 +205,7 @@ public class HomeController extends Controller {
      *
      * @param request request on where to pick up the sources
      * @return all courses in NewsAPI
+     * @author Ilyes
      */
     public CompletionStage<Result> sources(Http.Request request) {
         String country = request.getQueryString("country");
