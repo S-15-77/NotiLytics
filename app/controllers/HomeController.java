@@ -2,7 +2,7 @@ package controllers;
 
 import models.Article;
 import models.QueryResult;
-import controllers.ReadabilityCalculator;
+import models.ReadabilityCalculator;
 import models.SourceProfile;
 import models.Statistics;
 import play.mvc.*;
