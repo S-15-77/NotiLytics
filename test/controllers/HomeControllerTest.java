@@ -121,14 +121,6 @@ public class HomeControllerTest {
         // Verify results
         assertEquals(OK, result.status());
         String body = contentAsString(result);
-        //System.out.println(body);
         assertTrue(body.contains("Word Statistics for " + key));
-
-        //assertEquals(OK, result.status());
-        //String body = contentAsString(result);
-        //System.out.println(body);
-        //assertTrue(body.contains("\"Word Statistics for \" + key + \" (\" + numberOfArticles + \" articles)\""));
-        //assertTrue(body.contains("title:4"));
-
     }
 }

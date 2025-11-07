@@ -74,6 +74,4 @@ public class SourceController {
             return ok(views.html.sourceProfile.render(profile,last10));
         });
     }
-
-
 }
