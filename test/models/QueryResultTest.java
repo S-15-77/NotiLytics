@@ -88,4 +88,107 @@ public class QueryResultTest {
         ));
         assertEquals(1, qr.getArticles().size());
     }
+
+    /**
+     * Ensures calculateFleschKincaidGrade() returns 0.0 when no sentences are detected
+     *  A string of only punctuation is split away by the
+     * sentence pattern, yielding zero sentences.
+     * @author Santhosh
+     */
+    @Test
+    public void testGrade_NoSentences_ReturnsZero() {
+        String text = "!!!...???";
+        assertEquals(0.0, ReadabilityCalculator.calculateFleschKincaidGrade(text), 0.0);
+    }
+
+    /**
+     * Ensures calculateFleschReadingScore() returns 0.0 when no sentences are detected
+     * (line 56 guard: sentences == 0). Again use only punctuation so the split produces zero sentences.
+     * @author Santhosh
+     */
+    @Test
+    public void testScore_NoSentences_ReturnsZero() {
+        String text = "?!..!!";
+        assertEquals(0.0, ReadabilityCalculator.calculateFleschReadingScore(text), 0.0);
+    }
+
+    /**
+     * Covers the branch at the start of countSyllablesInWord  after stripping
+     * non-letters, an empty word should return 0 syllables (e.g., "1234" or symbols only).
+     * @author Santhosh
+     */
+    @Test
+    public void testCountSyllablesInWord_OnlyNonLetters_ReturnsZero() {
+        assertEquals(0, ReadabilityCalculator.countSyllablesInWord("1234"));
+        assertEquals(0, ReadabilityCalculator.countSyllablesInWord("$$$"));
+    }
+
+    /**
+     * Covers the silent 'e' decrement branch  where the word ends with 'e'
+     * but NOT "consonant + le". For "make", the naive count is 2, then the trailing 'e' is
+     * removed → result should be 1.
+     * @author Santhosh
+     */
+    @Test
+    public void testCountSyllablesInWord_SilentE_Decrements() {
+        assertEquals(1, ReadabilityCalculator.countSyllablesInWord("make"));
+        assertEquals(1, ReadabilityCalculator.countSyllablesInWord("cake"));
+    }
+
+    /**
+     * Covers the "consonant + le" exception branch words ending in "le"
+     * preceded by a consonant should NOT decrement for the trailing 'e'. For "table", the
+     * expected count is 2, not 1.
+     * @author Santhosh
+     */
+    @Test
+    public void testCountSyllablesInWord_ConsonantPlusLe_NotDecremented() {
+        assertEquals(2, ReadabilityCalculator.countSyllablesInWord("table"));
+        assertEquals(2, ReadabilityCalculator.countSyllablesInWord("bottle"));
+    }
+    /**
+     * Extra guard coverage: a sentence delimiter plus digits yields one "sentence" but zero words,
+     * so score should be 0.0 due to words == 0.
+     * @author Santhosh
+     */
+    @Test
+    public void testScore_NoWords_ReturnsZero() {
+        String text = "12345!!!";
+        assertEquals(0.0, ReadabilityCalculator.calculateFleschReadingScore(text), 0.0);
+    }
+
+    /**
+     * Verifies the early-return guard cases and a normal computation case for grade.
+     * Cases:
+     * - No sentences
+     * - No valid words
+     * - Regular sentence (non-zero result)
+     * @author Santhosh
+     */
+    @Test
+    public void testGrade_GuardsAndNormalCase() {
+        assertEquals(0.0, ReadabilityCalculator.calculateFleschKincaidGrade("!!!"), 0.0);   // no sentences
+        assertEquals(0.0, ReadabilityCalculator.calculateFleschKincaidGrade("123."), 0.0);  // no words
+        assertNotEquals(0.0, ReadabilityCalculator.calculateFleschKincaidGrade("This is a sentence."), 0.0); // normal
+    }
+
+    /**
+     * Verifies syllable counting around silent 'e' and consonant+'le' handling,
+     * plus the case where the count would not be decremented.
+     * Cases:
+     * - consonant+le (no decrement)
+     * - vowel+le (decrement)
+     * - ends with 'e' but not 'le' (decrement)
+     * - single-letter 'e' (no decrement due to minimum)
+     * @author Santhosh
+     */
+    @Test
+    public void testCountSyllables_SilentEAndLeVariants() {
+        assertEquals(2, ReadabilityCalculator.countSyllablesInWord("table")); // consonant+le → no decrement
+        assertEquals(1, ReadabilityCalculator.countSyllablesInWord("ale"));   // vowel+le → decrement
+        assertEquals(1, ReadabilityCalculator.countSyllablesInWord("make"));  // trailing 'e' (not 'le') → decrement
+        assertEquals(1, ReadabilityCalculator.countSyllablesInWord("e"));     // minimum syllable enforcement
+    }
+
+
 }
