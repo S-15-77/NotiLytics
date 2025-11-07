@@ -30,6 +30,7 @@ public class Client implements WSBodyReadables, WSBodyWritables {
      *
      * @param url NewsAPI request URL
      * @return CompletionStage<List<Article>>
+     * @author Santhosh
      */
     public CompletionStage<List<Article>> clientRequest(String url) {
 
@@ -72,6 +73,7 @@ public class Client implements WSBodyReadables, WSBodyWritables {
      * Returns a list of all sources available on NewsAPI
      * @param requestUrl requestUrl for news api
      * @return Promise of a list of all sources
+     * @author Santhosh
      */
     public CompletionStage<List<Source>> fetchSources(String requestUrl) {
         return ws.url(requestUrl)
@@ -99,7 +101,19 @@ public class Client implements WSBodyReadables, WSBodyWritables {
                 });
     }
 
-    /** Converts UTC date to EDT */
+    /**
+     * Converts an ISO-8601 UTC timestamp (e.g., {@code 2025-11-06T13:45:00Z})
+     * to the America/Toronto timezone and formats it as
+     * {@code yyyy-MM-dd, HH:mm:ss}.
+     *
+     * <p>If parsing fails (null, empty, or malformed input), the method returns
+     * {@code "Unknown Date"}.</p>
+     *
+     * @param utcDate an ISO-8601 timestamp string in UTC (e.g., {@code 2025-11-06T13:45:00Z})
+     * @return the timestamp converted to EDT/EST (America/Toronto) formatted as
+     *         {@code yyyy-MM-dd, HH:mm:ss}, or {@code "Unknown Date"} on error
+     *         @author Santhosh
+     */
     private String convertToEDT(String utcDate) {
         try {
             Instant instant = Instant.parse(utcDate);
@@ -110,7 +124,20 @@ public class Client implements WSBodyReadables, WSBodyWritables {
         }
     }
 
-    /** Builds a valid hyperlink for the source website */
+    /**
+     * Builds a best-effort source homepage URL from a human-readable source name.
+     *
+     * <p>The source name is lower-cased and internal whitespace is removed to form a
+     * domain like {@code https://www.{normalized}.com}. For example, {@code "The Guardian"}
+     * becomes {@code https://www.theguardian.com}.</p>
+     *
+     * <p>If {@code sourceName} is null or empty, returns {@code "#"} to indicate that
+     * a valid link is not available.</p>
+     *
+     * @param sourceName the display name of the source (e.g., {@code "BBC News"})
+     * @return a constructed homepage URL (e.g., {@code https://www.bbcnews.com}) or {@code "#"} if no name provided
+     * @author Santhosh
+     */
     private String buildSourceUrl(String sourceName) {
         if (sourceName == null || sourceName.isEmpty()) return "#";
         String normalized = sourceName.toLowerCase().replaceAll("\\s+", "");

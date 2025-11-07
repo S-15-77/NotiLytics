@@ -2,7 +2,8 @@ package controllers;
 
 import models.Article;
 import models.QueryResult;
-import controllers.ReadabilityCalculator;
+import models.ReadabilityCalculator;
+import models.SourceProfile;
 import models.Statistics;
 import play.mvc.*;
 import play.libs.ws.*;
@@ -25,7 +26,6 @@ public class HomeController extends Controller {
     private final Executor executor;
     private final String Key;
     private final String url;
-    private final String topHeadlinesUrl;
     //We have to move to an in memory cache because if not we recall every single past query with the new filters applied.
     //Or else this maxes out calls toq the API for country or category, as it uses a different link "top headlines" (see application.conf)
     Map<String, QueryResult> cache = new LinkedHashMap<>();
@@ -75,7 +75,7 @@ public class HomeController extends Controller {
         if (data == null || data.isEmpty()) return new ArrayList<>();
         return new ArrayList<>(Arrays.asList(data.split(",")));
     }
-
+    
     /**
      * Stores new query at top, removes duplicates, keeps at most 10.
      *
@@ -126,7 +126,6 @@ public class HomeController extends Controller {
         this.executor = executor;
         this.Key = config.getString("newsapi.key");
         this.url = config.getString("newsapi.url");
-        this.topHeadlinesUrl = config.getString("newsapi.topheadlines.url");
     }
 
     /**
@@ -147,7 +146,7 @@ public class HomeController extends Controller {
      *
      * @param request The HTTP request.
      * @return The rendered result.
-     * @author Team
+     * @author Karim , Santhosh
      */
     public CompletionStage<Result> search(Http.Request request) {
         String searchInput = request.getQueryString("SearchInput");
@@ -262,5 +261,40 @@ public class HomeController extends Controller {
             return ok(views.html.statProfile.render("Word Statistics for " + key + " (" + numberOfArticles + " articles)", counter));
         });
     }
-}
 
+
+    /**
+     * Handles retrieving the last 10 articles of a source for its Profile Page.
+     * @param sourceName the name of the selected source.
+     * @return the rendered result.
+     * @author Haytham
+     */
+    public CompletionStage<Result> profile(String sourceName, String id) {
+
+        String requestUrl = this.url + "sources=" + (id != null ? id : sourceName) + "&apiKey=" + this.Key;
+
+        Client client = new Client(this.ws);
+
+        CompletionStage<List<Article>> response = client.clientRequest(requestUrl);
+
+        return response.thenApply(articles -> {
+
+            if (articles == null || articles.isEmpty()) {
+                return ok(views.html.sourceProfile.render(
+                        new SourceProfile(sourceName, "", "No Articles Found for this source at this time. Please try again later!"),
+                        new ArrayList<>()
+                ));
+            }
+
+            List<Article> last10 = articles.stream().limit(10).toList();
+
+            SourceProfile profile = new SourceProfile(
+                    sourceName,
+                    last10.get(0).getSourceUrl(),
+                    "Listing Articles from " + sourceName + "."
+            );
+
+            return ok(views.html.sourceProfile.render(profile,last10));
+        });
+    }
+}
