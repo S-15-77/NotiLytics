@@ -93,6 +93,75 @@ public class HomeControllerTest {
         assertTrue(body.contains("Search Results for"));
     }
 
+    /**
+     * Tests the source() method in HomeController
+     */
+    @Test
+    public void testSource() {
+        //No filters tested here
+        Http.Request fakeRequest = fakeRequest()
+                .method(GET)
+                .uri("/sources")
+                .build();
+
+        Result result = controller.sources(fakeRequest).toCompletableFuture().join();
+
+        assertEquals(OK, result.status());
+        String body = contentAsString(result);
+        assertTrue(body.contains("News Sources"));
+
+        //Country filter tested here
+        fakeRequest = fakeRequest()
+                .method(GET)
+                .uri("/sources?country=us")
+                .build();
+
+        result = controller.sources(fakeRequest).toCompletableFuture().join();
+
+        assertEquals(OK, result.status());
+        body = contentAsString(result);
+        assertTrue(body.contains("News Sources"));
+
+        //Category filter now
+        fakeRequest = fakeRequest()
+                .method(GET)
+                .uri("/sources?category=technology")
+                .build();
+
+        result = controller.sources(fakeRequest).toCompletableFuture().join();
+
+        assertEquals(OK, result.status());
+        body = contentAsString(result);
+        assertTrue(body.contains("News Sources"));
+
+        //Language filter
+        fakeRequest = fakeRequest()
+                .method(GET)
+                .uri("/sources?language=fr")
+                .build();
+
+        result = controller.sources(fakeRequest).toCompletableFuture().join();
+
+        assertEquals(OK, result.status());
+        body = contentAsString(result);
+        assertTrue(body.contains("News Sources"));
+
+        //We will simulate an error to see what happens here
+        CompletableFuture<WSResponse> failedFuture = new CompletableFuture<>();
+        failedFuture.completeExceptionally(new RuntimeException("API Error")); //CompletableFuture does not fulfill promise here
+        Mockito.when(mockRequest.get()).thenReturn(failedFuture); //Mockito mocks a failed return
+
+        fakeRequest = fakeRequest() //fake http request
+                .method(GET)
+                .uri("/sources")
+                .build();
+
+        result = controller.sources(fakeRequest).toCompletableFuture().join();
+
+        assertEquals(INTERNAL_SERVER_ERROR, result.status());
+        body = contentAsString(result);
+        assertTrue(body.contains("Error fetching sources"));
+    }
     @Test
     public void testStat() {
         String key = "testKey";
