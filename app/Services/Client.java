@@ -30,7 +30,7 @@ public class Client implements WSBodyReadables, WSBodyWritables {
      *
      * @param url NewsAPI request URL
      * @return CompletionStage<List<Article>>
-     * @author Santhosh
+     * @author Santhosh and Karim
      */
     public CompletionStage<List<Article>> clientRequest(String url) {
 

@@ -45,6 +45,11 @@ public class HomeControllerTest {
     private Executor executor;
     private HomeController controller;
 
+    /**
+     * Sets up a minimal controller with mocked dependencies (WS client, config, executor).
+     * Stubs NewsAPI config values and ensures WSClient.get() returns a completed future.
+     * @author Santhosh
+     */
     @Before
     public void setup() {
         // --- Mock dependencies ---
@@ -76,7 +81,11 @@ public class HomeControllerTest {
         controller = new HomeController(mockWs, executor, mockConfig);
     }
 
-    /** Test that index() renders the welcome message correctly. */
+    /**
+     * Verifies that {@link HomeController#index(play.mvc.Http.Request)} renders the
+     * welcome page and returns HTTP 200 with the expected greeting.
+     * @author Santhosh
+     */
     @Test
     public void testIndexRendersWelcomeMessage() {
         Http.Request fakeRequest = fakeRequest().build();
@@ -86,7 +95,11 @@ public class HomeControllerTest {
         assertTrue(contentAsString(result).contains("Welcome to NotiLytics"));
     }
 
-    /** Test that empty SearchInput renders the prompt message. */
+    /**
+     * Ensures that when no SearchInput is provided, {@link HomeController#search(Http.Request)}
+     * returns HTTP 200 and prompts the user to enter a search term.
+     * @author Santhosh
+     */
     @Test
     public void testSearchWithEmptyInputReturnsPrompt() {
         Http.Request fakeRequest = fakeRequest().method(GET).uri("/search").build();
@@ -96,7 +109,11 @@ public class HomeControllerTest {
         assertTrue(contentAsString(result).contains("Please enter a search term"));
     }
 
-    /** Test that valid SearchInput produces a rendered response. */
+    /**
+     * Confirms that a valid SearchInput path renders a results page (HTTP 200)
+     * and includes the “Search Results for …” marker in the response body.
+     * @author Santhosh
+     */
     @Test
     public void testSearchWithValidInputUpdatesSession() {
         Http.Request fakeRequest = fakeRequest()
@@ -181,6 +198,12 @@ public class HomeControllerTest {
         body = contentAsString(result);
         assertTrue(body.contains("Error fetching sources"));
     }
+    /**
+     * Covers {@link HomeController#stats(Http.Request, String)}:
+     * - seeds the in-memory cache with a {@link QueryResult}
+     * - verifies that the response is HTTP 200 and the title includes the query key.
+     * @author karim
+     */
     @Test
     public void testStat() {
         String key = "testKey";
@@ -212,6 +235,11 @@ public class HomeControllerTest {
         assertTrue(body.contains("Word Statistics for " + key));
     }
 
+    /**
+     * Verifies the empty-articles branch in {@link HomeController#profile(String, String)}:
+     * when the client returns an empty list, the controller renders the “No Articles Found” message.
+     * @author Santhosh
+     */
     @Test
     public void profile_returnsEmptyViewMessage_whenNoArticles() throws Exception {
         try (MockedConstruction<Client> mocked =
@@ -228,6 +256,12 @@ public class HomeControllerTest {
         }
     }
 
+    /**
+     * Verifies the non-empty branch in {@link HomeController#profile(String, String)}:
+     * when the client returns at least one article, the controller renders a listing
+     * and surfaces the source URL in the view.
+     * @author Santhosh
+     */
     @Test
     public void profile_listsArticles_whenPresent() throws Exception {
         Article a = new Article("T1", "u1", "BBC", "https://bbc.com",
@@ -249,6 +283,13 @@ public class HomeControllerTest {
     }
 
 
+    /**
+     * Unit-tests the private overload {@code updateSession(session, newQuery, limit)} via reflection:
+     * - removes an existing duplicate of the new query,
+     * - places the new query at the front,
+     * - trims the list to the provided limit while preserving relative order of older items.
+     * @author Santhosh
+     */
     @Test
     public void updateSession_removesDuplicate_putsNewFirst_andTrimsToLimit() throws Exception {
         // Build a session that already has more than the limit and contains the new query in the middle
@@ -278,8 +319,13 @@ public class HomeControllerTest {
         assertArrayEquals(expectedTail, Arrays.copyOfRange(qs, 1, qs.length));
     }
 
-    // ---------------- getCache() (and setter) ----------------
 
+    /**
+     * Sanity-checks cache accessor behavior:
+     * ensures {@link HomeController#setCache(Map)} and {@link HomeController#getCache()}
+     * operate on the same instance and that entries are preserved.
+     * @author Santhosh
+     */
     @Test
     public void getCache_returnsSameMap_setViaSetter() {
         Map<String, QueryResult> expected = new LinkedHashMap<>();
@@ -292,6 +338,11 @@ public class HomeControllerTest {
         assertTrue(actual.containsKey("q"));
     }
 
+    /**
+     * Ensures that when the {@code showSources} parameter is absent, the search page still
+     * renders successfully with the default flag (false) and shows the results banner.
+     * @author Santhosh
+     */
     @Test
     public void testSearch_showSourcesAbsent_defaultsFalse() {
         // Return an empty article list from the constructed Client
@@ -312,6 +363,11 @@ public class HomeControllerTest {
         }
     }
 
+    /**
+     * Verifies that all optional filter parameters (country, category, language) are appended
+     * to the URL passed into the client for the sources endpoint.
+     * @author Santhosh
+     */
     @Test
     public void testSources_addsAllFiltersToUrl() {
         // Capture the URL passed to Client.fetchSources(...)
@@ -344,6 +400,11 @@ public class HomeControllerTest {
         }
     }
 
+    /**
+     * Verifies that all optional filter parameters (country, category, language) are appended
+     * to the URL passed into the client for the sources endpoint.
+     * @author Santhosh
+     */
     @Test
     public void testProfile_withId_usesIdInUrl_andRendersArticles() throws Exception {
         // Build a minimal article so the "non-empty" path is taken
@@ -375,6 +436,11 @@ public class HomeControllerTest {
         }
     }
 
+    /**
+     * Duplicates the “no articles” profile path to ensure coverage when invoking
+     * the method without an id and with a specific source name.
+     * @author Santhosh
+     */
     @Test
     public void testProfile_emptyList_rendersNoArticlesMessage() {
         try (org.mockito.MockedConstruction<Client> mocked = org.mockito.Mockito.mockConstruction(
@@ -390,6 +456,12 @@ public class HomeControllerTest {
     }
 
 
+    /**
+     * Reflection-based test for the private {@code getPreviousQueries(session)}:
+     * - returns an empty list when the session lacks the key,
+     * - splits a CSV string into an ordered list of prior queries when present.
+     * @author Santhosh
+     */
     @Test
     @SuppressWarnings("unchecked")
     public void getPreviousQueries_handlesEmptyAndCsv() throws Exception {

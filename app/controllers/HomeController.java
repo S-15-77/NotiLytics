@@ -26,8 +26,6 @@ public class HomeController extends Controller {
     private final Executor executor;
     private final String Key;
     private final String url;
-    //We have to move to an in memory cache because if not we recall every single past query with the new filters applied.
-    //Or else this maxes out calls toq the API for country or category, as it uses a different link "top headlines" (see application.conf)
     Map<String, QueryResult> cache = new LinkedHashMap<>();
 
     private static final String SESSION_KEY = "queries";
