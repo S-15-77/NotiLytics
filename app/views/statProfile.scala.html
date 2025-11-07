@@ -1,0 +1,59 @@
+@(title: String, statsString: String)
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>@title</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            line-height: 1.6;
+        }
+        .container {
+            display: flex;
+            gap: 40px;
+            align-items: flex-start;
+        }
+        .text-container {
+            flex: 1;
+            white-space: pre-wrap;
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            font-family: monospace;
+        }
+        .sidebar {
+            flex: 0 0 200px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+
+<body>
+<h2>@title</h2>
+
+<div class="container">
+    <div class="text-container">
+        @statsString
+    </div>
+
+    <div class="sidebar">
+        <button onclick="window.history.back()">← Back</button>
+    </div>
+</div>
+</body>
+</html>

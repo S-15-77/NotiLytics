@@ -35,6 +35,7 @@ public class HomeController extends Controller {
 
     /**
      * Fetches the cache field
+     *
      * @return the cache
      * @author Team
      */
@@ -44,6 +45,7 @@ public class HomeController extends Controller {
 
     /**
      * modifies the cache
+     *
      * @return the cache
      * @author Team
      */
@@ -53,6 +55,7 @@ public class HomeController extends Controller {
 
     /**
      * Fetches the maxArticlesVisible field
+     *
      * @return the max number of articles to print on the view
      * @author Team
      */
@@ -62,6 +65,7 @@ public class HomeController extends Controller {
 
     /**
      * Reads queries stored in user session.
+     *
      * @param session The HTTP session.
      * @return List of previous queries.
      * @author Team
@@ -74,7 +78,8 @@ public class HomeController extends Controller {
 
     /**
      * Stores new query at top, removes duplicates, keeps at most 10.
-     * @param session The HTTP session.
+     *
+     * @param session  The HTTP session.
      * @param newQuery The new search query.
      * @return Updated session.
      * @author Team
@@ -90,8 +95,9 @@ public class HomeController extends Controller {
 
     /**
      * Stores new query at top, removes duplicates, keeps at most 10.
-     * @param session The HTTP session.
-     * @param newQuery The new search query.
+     *
+     * @param session   The HTTP session.
+     * @param newQuery  The new search query.
      * @param querySize the max number of query
      * @return Updated session.
      * @author Team
@@ -108,9 +114,10 @@ public class HomeController extends Controller {
 
     /**
      * Constructs the HomeController with dependencies.
-     * @param ws Play WSClient for HTTP requests.
+     *
+     * @param ws       Play WSClient for HTTP requests.
      * @param executor Executor for async tasks.
-     * @param config App configuration.
+     * @param config   App configuration.
      * @author Team
      */
     @Inject
@@ -124,6 +131,7 @@ public class HomeController extends Controller {
 
     /**
      * Renders the index page with no results.
+     *
      * @param request The HTTP request.
      * @return The rendered result.
      * @author Team
@@ -136,6 +144,7 @@ public class HomeController extends Controller {
 
     /**
      * Handles search requests, fetches articles, computes readability, and renders results.
+     *
      * @param request The HTTP request.
      * @return The rendered result.
      * @author Team
@@ -158,7 +167,7 @@ public class HomeController extends Controller {
         String encodedQuery = searchInput.trim().replaceAll("\\s+", "+");
 
         // Simple URL construction without filters
-        String requestUrl = this.url + "q=" + encodedQuery + "&sortBy=" + sortBy + "&pageSize="+getMaxArticlesVisible()+"&apiKey=" + this.Key;
+        String requestUrl = this.url + "q=" + encodedQuery + "&sortBy=" + sortBy + "&pageSize=" + getMaxArticlesVisible() + "&apiKey=" + this.Key;
 
         Client client = new Client(this.ws);
         CompletionStage<List<Article>> response = client.clientRequest(requestUrl);
@@ -178,7 +187,8 @@ public class HomeController extends Controller {
             for (String q : queries) {
                 if (count >= maxArticlesVisible) break;
                 QueryResult r = cache.get(q);
-                if (r != null) resultsByQuery.put(q, r); //Ensures no NullPointerException if we get a bad call when testing for example
+                if (r != null)
+                    resultsByQuery.put(q, r); //Ensures no NullPointerException if we get a bad call when testing for example
                 count++;
             }
 
@@ -193,6 +203,7 @@ public class HomeController extends Controller {
 
     /**
      * Returns all sources found in NewsAPI
+     *
      * @param request request on where to pick up the sources
      * @return all courses in NewsAPI
      */
@@ -233,21 +244,23 @@ public class HomeController extends Controller {
 
     /**
      * Handles the calculation of the word statistics for the articles.
+     *
      * @param request The HTTP request.
-     * @param key the statistics button clicked
+     * @param key     the statistics button clicked
      * @return The rendered result.
      * @author Karim BG
      */
-    public Result stats(Http.Request request, String key) {
-        Statistics s = new Statistics(cache.get(key));
-        int numberOfArticles = cache.get(key).getArticles().size();
-        List<String> TitlesAndDescription = new ArrayList<>(s.getTitles());
-        TitlesAndDescription.addAll(s.getDescriptions());
-        String counter = Statistics.getString(
-                Statistics.getCounter(
-                        Statistics.filtering(
-                                Statistics.getWords(
-                                        TitlesAndDescription))));
-        return ok("More Statistics:\n" + numberOfArticles +" articles have been taken into account.\n"+counter);
+    public CompletionStage<Result> stats(Http.Request request, String key) {
+        return CompletableFuture.supplyAsync(() -> {
+            Statistics s = new Statistics(cache.get(key));
+            int numberOfArticles = cache.get(key).getArticles().size();
+            List<String> titlesAndDescription = new ArrayList<>(s.getTitles());
+            titlesAndDescription.addAll(s.getDescriptions());
+            String counter = Statistics.getString(Statistics.getCounter(
+                    Statistics.filtering(
+                            Statistics.getWords(titlesAndDescription))));
+            return ok(views.html.statProfile.render("Word Statistics for " + key + " (" + numberOfArticles + " articles)", counter));
+        });
     }
 }
+
