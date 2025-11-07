@@ -292,5 +292,138 @@ public class HomeControllerTest {
         assertTrue(actual.containsKey("q"));
     }
 
+    @Test
+    public void testSearch_showSourcesAbsent_defaultsFalse() {
+        // Return an empty article list from the constructed Client
+        try (org.mockito.MockedConstruction<Client> mocked = org.mockito.Mockito.mockConstruction(
+                Client.class,
+                (mock, ctx) -> when(mock.clientRequest(anyString()))
+                        .thenReturn(CompletableFuture.completedFuture(java.util.Collections.emptyList()))
+        )) {
+            Http.Request req = fakeRequest()
+                    .method(GET)
+                    .uri("/search?SearchInput=energy&sortBy=relevancy") // no showSources param
+                    .build();
+
+            Result result = controller.search(req).toCompletableFuture().join();
+            assertEquals(OK, result.status());
+            String body = contentAsString(result);
+            assertTrue(body.contains("Search Results for: energy")); // page rendered with showSources=false
+        }
+    }
+
+    @Test
+    public void testSources_addsAllFiltersToUrl() {
+        // Capture the URL passed to Client.fetchSources(...)
+        final java.util.concurrent.atomic.AtomicReference<String> captured = new java.util.concurrent.atomic.AtomicReference<>();
+
+        try (org.mockito.MockedConstruction<Client> mocked = org.mockito.Mockito.mockConstruction(
+                Client.class,
+                (mock, ctx) -> {
+                    when(mock.fetchSources(org.mockito.ArgumentMatchers.anyString()))
+                            .thenAnswer(inv -> {
+                                captured.set(inv.getArgument(0));
+                                return CompletableFuture.completedFuture(java.util.Collections.emptyList());
+                            });
+                }
+        )) {
+            Http.Request req = fakeRequest()
+                    .method(GET)
+                    .uri("/sources?country=us&category=technology&language=en")
+                    .build();
+
+            Result result = controller.sources(req).toCompletableFuture().join();
+            assertEquals(OK, result.status());
+
+            String url = captured.get();
+            assertNotNull(url);
+            // All three filters must be present in the built URL
+            assertTrue(url.contains("country=us"));
+            assertTrue(url.contains("category=technology"));
+            assertTrue(url.contains("language=en"));
+        }
+    }
+
+    @Test
+    public void testProfile_withId_usesIdInUrl_andRendersArticles() throws Exception {
+        // Build a minimal article so the "non-empty" path is taken
+        models.Article a = new models.Article(
+                "T1", "https://a", "Src", "https://src.com",
+                "2025-01-01, 12:00:00", 5, 5, "desc"
+        );
+
+        final java.util.concurrent.atomic.AtomicReference<String> captured = new java.util.concurrent.atomic.AtomicReference<>();
+
+        try (org.mockito.MockedConstruction<Client> mocked = org.mockito.Mockito.mockConstruction(
+                Client.class,
+                (mock, ctx) -> when(mock.clientRequest(org.mockito.ArgumentMatchers.anyString()))
+                        .thenAnswer(inv -> {
+                            captured.set(inv.getArgument(0));
+                            return CompletableFuture.completedFuture(java.util.List.of(a));
+                        })
+        )) {
+            // Pass a non-null id to exercise the id-path in URL construction
+            java.util.concurrent.CompletionStage<Result> stage = controller.profile("BBC", "bbc-news");
+            Result result = stage.toCompletableFuture().join();
+
+            assertEquals(OK, result.status());
+            String url = captured.get();
+            assertNotNull(url);
+            assertTrue(url.contains("sources=bbc-news")); // id used, not the sourceName
+            String body = contentAsString(result);
+            assertTrue(body.contains("Listing Articles from BBC")); // rendered non-empty branch
+        }
+    }
+
+    @Test
+    public void testProfile_emptyList_rendersNoArticlesMessage() {
+        try (org.mockito.MockedConstruction<Client> mocked = org.mockito.Mockito.mockConstruction(
+                Client.class,
+                (mock, ctx) -> when(mock.clientRequest(anyString()))
+                        .thenReturn(CompletableFuture.completedFuture(java.util.Collections.emptyList()))
+        )) {
+            Result result = controller.profile("AnySource", null).toCompletableFuture().join();
+            assertEquals(OK, result.status());
+            String body = contentAsString(result);
+            assertTrue(body.contains("No Articles Found for this source"));
+        }
+    }
+
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void getPreviousQueries_handlesEmptyAndCsv() throws Exception {
+        // Arrange controller with minimal deps
+        WSClient ws = Mockito.mock(WSClient.class);
+        Executor ex = java.util.concurrent.Executors.newSingleThreadExecutor();
+        Config cfg = Mockito.mock(Config.class);
+        Mockito.when(cfg.getString("newsapi.key")).thenReturn("dummyKey");
+        Mockito.when(cfg.getString("newsapi.url")).thenReturn("https://newsapi.org/v2/everything?");
+        HomeController ctrl = new HomeController(ws, ex, cfg);
+
+        // Access private method
+        java.lang.reflect.Method m = HomeController.class
+                .getDeclaredMethod("getPreviousQueries", Http.Session.class);
+        m.setAccessible(true);
+
+        // Case 1: no 'queries' in session (empty result expected)
+        Http.Session sEmpty = new Http.Session(java.util.Collections.emptyMap());
+        java.util.List<String> none =
+                (java.util.List<String>) m.invoke(ctrl, sEmpty);
+        assertNotNull(none);
+        assertTrue(none.isEmpty());
+
+        // Case 2: CSV present → split into list
+        Http.Session sCsv = new Http.Session(
+                java.util.Collections.singletonMap("queries", "q1,q2,q3"));
+        java.util.List<String> got =
+                (java.util.List<String>) m.invoke(ctrl, sCsv);
+        assertEquals(3, got.size());
+        assertEquals(java.util.Arrays.asList("q1","q2","q3"), got);
+    }
+
+
+
+
 
 }

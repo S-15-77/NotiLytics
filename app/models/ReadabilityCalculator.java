@@ -144,10 +144,12 @@ public class ReadabilityCalculator {
 
         if (word.endsWith("e") && count > 1) {
             int len = word.length();
-            boolean consonantPlusLe = len >= 3 && word.endsWith("le")
-                    && "aeiouy".indexOf(word.charAt(len - 3)) == -1;
+            boolean consonantPlusLe = len >= 3 && word.endsWith("le") && "aeiouy".indexOf(word.charAt(len - 3)) == -1;
             if (!consonantPlusLe) count--;
         }
         return Math.max(count, 1);
     }
+
+
+
 }

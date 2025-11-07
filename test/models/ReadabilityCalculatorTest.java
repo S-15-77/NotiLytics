@@ -137,5 +137,18 @@ public class ReadabilityCalculatorTest {
             assertEquals("No instances", e.getCause().getMessage());
         }
     }
+    /**
+     * Covers the branch where (len>=3 && endsWith("le") && prev char is a consonant)
+     * and the opposite (prev char is a vowel).
+     * @author Santhosh
+     */
+    @Test
+    public void testConsonantPlusLeBranch() {
+        // prev char before "le" is a consonant -> special case applies (no decrement)
+        assertEquals(2, ReadabilityCalculator.countSyllablesInWord("bottle")); // bot-tle
+
+        // prev char before "le" is a vowel -> special case does NOT apply (decrement happens)
+        assertEquals(1, ReadabilityCalculator.countSyllablesInWord("whale"));  // wha(le silent)
+    }
 }
 
