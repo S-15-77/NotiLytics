@@ -65,6 +65,8 @@ public class ReadabilityCalculator {
      */
     public static double averageGrade(List<String> descriptions) {
         return descriptions.stream()
+                .filter(desc -> desc != null && !desc.trim().isEmpty()) // Filter null or empty
+                .limit(50) // Process up to 50 descriptions
                 .mapToDouble(ReadabilityCalculator::calculateFleschKincaidGrade)
                 .average()
                 .orElse(0.0);
@@ -78,6 +80,8 @@ public class ReadabilityCalculator {
      */
     public static double averageScore(List<String> descriptions) {
         return descriptions.stream()
+                .filter(desc -> desc != null && !desc.trim().isEmpty()) // Filter null or empty
+                .limit(50) // Process up to 50 descriptions
                 .mapToDouble(ReadabilityCalculator::calculateFleschReadingScore)
                 .average()
                 .orElse(0.0);
