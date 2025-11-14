@@ -76,10 +76,10 @@ public class HomeController extends Controller {
     }
 
     /**
-     * Renders the index page with no results.
-     * @param request The HTTP request.
-     * @return The rendered result.
-     * @author Team
+     * Render the index page showing a welcome message and no search results.
+     *
+     * @param request the incoming HTTP request
+     * @return an HTTP 200 OK result rendering the index view with a welcome message and an empty results map
      */
     public CompletionStage<Result> index(Http.Request request) {
         // show welcome page with no results
@@ -88,10 +88,11 @@ public class HomeController extends Controller {
     }
 
     /**
-     * Handles search requests, fetches articles, computes readability, and renders results.
-     * @param request The HTTP request.
-     * @return The rendered result.
-     * @author Team
+     * Process a search query, fetch matching articles, compute readability metrics, update the session history, and render the index view with results.
+     *
+     * @return `200 OK` rendering the index page populated with cached query results and readability metrics (session updated with the search term);
+     *         `200 OK` rendering the index page with a prompt and no results when the search term is missing or empty;
+     *         `500 Internal Server Error` with an error message if fetching articles fails.
      */
     public CompletionStage<Result> search(Http.Request request) {
         String searchInput = request.getQueryString("SearchInput");
@@ -142,9 +143,14 @@ public class HomeController extends Controller {
     }
 
     /**
-     * Returns all sources found in NewsAPI
-     * @param request request on where to pick up the sources
-     * @return all courses in NewsAPI
+     * Render the sources page using optional country, category, and language filters.
+     *
+     * Reads the optional "country", "category", and "language" query parameters, requests matching sources from NewsAPI,
+     * and renders the sources view populated with the returned sources and the selected filter values.
+     *
+     * @param request the HTTP request containing optional "country", "category", and "language" query parameters
+     * @return an HTTP Result rendering the sources view with the list of sources and the selected filter values;
+     *         if fetching sources fails, an internal server error Result with an error message is returned
      */
     public CompletionStage<Result> sources(Http.Request request) {
         String country = request.getQueryString("country");
