@@ -226,12 +226,24 @@ public class HomeController extends Controller {
         Client client = new Client(this.ws);
 
         return client.fetchSources(requestUrl)
-                .thenApply(sources -> ok(views.html.sources.render(
-                        sources,
-                        country != null ? country : "",
-                        category != null ? category : "",
-                        language != null ? language : ""
-                )))
+                .thenApply(sources -> {
+                    List<models.Source> filteredSources = sources.stream()
+                            .filter(source -> source != null)
+                            .filter(source -> country == null || country.isEmpty() ||
+                                    source.getCountry().equalsIgnoreCase(country))
+                            .filter(source -> category == null || category.isEmpty() ||
+                                    source.getCategory().equalsIgnoreCase(category))
+                            .filter(source -> language == null || language.isEmpty() ||
+                                    source.getLanguage().equalsIgnoreCase(language))
+                            .collect(Collectors.toList());
+
+                    return ok(views.html.sources.render(
+                            filteredSources,
+                            country != null ? country : "",
+                            category != null ? category : "",
+                            language != null ? language : ""
+                    ));
+                })
                 .exceptionally(ex -> {
                     System.err.println("Error fetching sources: " + ex.getMessage());
                     return internalServerError("Error fetching sources");
