@@ -46,5 +46,3 @@ $ ->
         tbody.append(row)
 
       $("p strong").text("Total sources: " + sources.length)
-    else
-      tbody.append($("<tr>").append($("<td colspan='6'>").text("No sources found")))

@@ -47,7 +47,7 @@ public final class SourcesActor {
                             Set<Source> sources = getSources.sourceIds.stream()
                                     .map(sourcesMap::get)
                                     .filter(s -> s != null)
-                                    .collect(Collectors.toSet());
+                                    .collect(Collectors.toSet()); //Exactly like the lab
                             getSources.replyTo.tell(new Sources(sources));
                             return Behaviors.same();
                         })

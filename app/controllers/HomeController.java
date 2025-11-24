@@ -225,49 +225,15 @@ public class HomeController extends Controller {
      * @author Ilyes
      */
     public CompletionStage<Result> sources(Http.Request request) {
-        String country = request.getQueryString("country");
-        String category = request.getQueryString("category");
-        String language = request.getQueryString("language");
-
-        String requestUrl = "https://newsapi.org/v2/top-headlines/sources?apiKey=" + this.Key;
-
-        // Add filters to URL if present
-        if (country != null && !country.isEmpty()) {
-            requestUrl += "&country=" + country;
-        }
-        if (category != null && !category.isEmpty()) {
-            requestUrl += "&category=" + category;
-        }
-        if (language != null && !language.isEmpty()) {
-            requestUrl += "&language=" + language;
-        }
-
-        Client client = new Client(this.ws);
-
-        return client.fetchSources(requestUrl)
-                .thenApply(sources -> {
-                    List<models.Source> filteredSources = sources.stream()
-                            .filter(source -> source != null)
-                            .filter(source -> country == null || country.isEmpty() ||
-                                    source.getCountry().equalsIgnoreCase(country))
-                            .filter(source -> category == null || category.isEmpty() ||
-                                    source.getCategory().equalsIgnoreCase(category))
-                            .filter(source -> language == null || language.isEmpty() ||
-                                    source.getLanguage().equalsIgnoreCase(language))
-                            .collect(Collectors.toList());
-
-                    return ok(views.html.sources.render(
-                            filteredSources,
-                            country != null ? country : "",
-                            category != null ? category : "",
-                            language != null ? language : "",
-                            request
-                    ));
-                })
-                .exceptionally(ex -> {
-                    System.err.println("Error fetching sources: " + ex.getMessage());
-                    return internalServerError("Error fetching sources");
-                });
+        return CompletableFuture.completedFuture(
+                ok(views.html.sources.render(
+                        Collections.emptyList(),
+                        "",
+                        "",
+                        "",
+                        request
+                ))
+        );
     }
 
     /**
