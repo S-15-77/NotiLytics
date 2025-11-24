@@ -1,10 +1,13 @@
 package controllers;
 
 import Services.Client;
+import actors.UserParentActor;
 import models.Article;
 import models.QueryResult;
+import org.apache.pekko.actor.typed.ActorRef;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mock;
 import org.mockito.MockedConstruction;
 import org.mockito.Mockito;
 import play.libs.ws.*;
@@ -33,7 +36,7 @@ import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.*;
 
-
+import org.apache.pekko.actor.ActorSystem;
 
 
 public class HomeControllerTest {
@@ -44,6 +47,8 @@ public class HomeControllerTest {
     private Config mockConfig;
     private Executor executor;
     private HomeController controller;
+    private ActorSystem system;
+    private ActorRef<UserParentActor.Create> userParentActor;
 
     /**
      * Sets up a minimal controller with mocked dependencies (WS client, config, executor).
@@ -57,6 +62,8 @@ public class HomeControllerTest {
         mockRequest = Mockito.mock(WSRequest.class);
         mockResponse = Mockito.mock(WSResponse.class);
         mockConfig = Mockito.mock(Config.class);
+        system = Mockito.mock(ActorSystem.class);
+        userParentActor = Mockito.mock(ActorRef.class);
         executor = Executors.newSingleThreadExecutor();
 
         // --- Stub config values ---
@@ -78,7 +85,7 @@ public class HomeControllerTest {
         when(mockRequest.get()).thenReturn(fakeFuture);
 
         // --- Instantiate controller ---
-        controller = new HomeController(mockWs, executor, mockConfig);
+        controller = new HomeController(mockWs, executor, mockConfig, system, userParentActor);
     }
 
     /**
@@ -469,9 +476,11 @@ public class HomeControllerTest {
         WSClient ws = Mockito.mock(WSClient.class);
         Executor ex = java.util.concurrent.Executors.newSingleThreadExecutor();
         Config cfg = Mockito.mock(Config.class);
+        ActorSystem ast = Mockito.mock(ActorSystem.class);
+        ActorRef<UserParentActor.Create> upa = Mockito.mock(ActorRef.class);
         Mockito.when(cfg.getString("newsapi.key")).thenReturn("dummyKey");
         Mockito.when(cfg.getString("newsapi.url")).thenReturn("https://newsapi.org/v2/everything?");
-        HomeController ctrl = new HomeController(ws, ex, cfg);
+        HomeController ctrl = new HomeController(ws, ex, cfg, ast, upa);
 
         // Access private method
         java.lang.reflect.Method m = HomeController.class
@@ -493,9 +502,4 @@ public class HomeControllerTest {
         assertEquals(3, got.size());
         assertEquals(java.util.Arrays.asList("q1","q2","q3"), got);
     }
-
-
-
-
-
 }

@@ -1,5 +1,6 @@
 package controllers;
 
+import actors.UserParentActor;
 import models.Article;
 import models.QueryResult;
 import models.ReadabilityCalculator;
@@ -16,6 +17,18 @@ import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 import Services.Client;
 
+import org.slf4j.Logger;
+import org.apache.pekko.stream.javadsl.Flow;
+import com.fasterxml.jackson.databind.JsonNode;
+import play.libs.F.Either;
+import org.apache.pekko.NotUsed;
+import org.apache.pekko.actor.typed.ActorRef;
+import org.apache.pekko.actor.typed.Scheduler;
+import org.apache.pekko.actor.typed.javadsl.Adapter;
+import org.apache.pekko.actor.typed.javadsl.AskPattern;
+import org.apache.pekko.actor.ActorSystem;
+import java.time.Duration;
+
 /**
  * Main controller for NotiLytics web application.
  * Handles search, session management, and result rendering.
@@ -26,6 +39,10 @@ public class HomeController extends Controller {
     private final Executor executor;
     private final String Key;
     private final String url;
+    private final Logger logger = org.slf4j.LoggerFactory.getLogger("controllers.HomeController"); //As seen in Lab 10
+    private final List<String> validOrigins = Arrays.asList("localhost:9000"); //We only need a single origin for now, can expand later if need be
+    private final ActorSystem system;
+    private final ActorRef<UserParentActor.Create> userParentActor;
     Map<String, QueryResult> cache = new LinkedHashMap<>();
 
     private static final String SESSION_KEY = "queries";
@@ -73,7 +90,7 @@ public class HomeController extends Controller {
         if (data == null || data.isEmpty()) return new ArrayList<>();
         return new ArrayList<>(Arrays.asList(data.split(",")));
     }
-    
+
 //    /**
 //     * Stores new query at top, removes duplicates, keeps at most 10.
 //     *
@@ -119,11 +136,13 @@ public class HomeController extends Controller {
      * @author Team
      */
     @Inject
-    public HomeController(WSClient ws, Executor executor, Config config) {
+    public HomeController(WSClient ws, Executor executor, Config config, ActorSystem system, ActorRef<UserParentActor.Create> userParentActor) {
         this.ws = ws;
         this.executor = executor;
         this.Key = config.getString("newsapi.key");
         this.url = config.getString("newsapi.url");
+        this.system = system;
+        this.userParentActor = userParentActor;
     }
 
     /**
@@ -136,7 +155,7 @@ public class HomeController extends Controller {
     public CompletionStage<Result> index(Http.Request request) {
         // show welcome page with no results
         Map<String, QueryResult> empty = new LinkedHashMap<>();
-        return CompletableFuture.completedFuture(ok(views.html.index.render("Welcome to NotiLytics! Enter your search terms below.", empty, true)));
+        return CompletableFuture.completedFuture(ok(views.html.index.render("Welcome to NotiLytics! Enter your search terms below.", empty, true, request)));
     }
 
     /**
@@ -155,7 +174,7 @@ public class HomeController extends Controller {
 
         if (searchInput == null || searchInput.trim().isEmpty()) {
             Map<String, QueryResult> empty = new LinkedHashMap<>();
-            return CompletableFuture.completedFuture(ok(views.html.index.render("Please enter a search term.", empty, true)));
+            return CompletableFuture.completedFuture(ok(views.html.index.render("Please enter a search term.", empty, true, request)));
         }
 
         Http.Session updatedSession = updateSession(request.session(), searchInput, getMaxArticlesVisible());
@@ -189,7 +208,7 @@ public class HomeController extends Controller {
                 count++;
             }
 
-            return ok(views.html.index.render("Search Results for: " + searchInput, resultsByQuery, showSources))
+            return ok(views.html.index.render("Search Results for: " + searchInput, resultsByQuery, showSources, request))
                     .withSession(updatedSession);
 
         }, executor).exceptionally(ex -> {
@@ -241,15 +260,14 @@ public class HomeController extends Controller {
                             filteredSources,
                             country != null ? country : "",
                             category != null ? category : "",
-                            language != null ? language : ""
+                            language != null ? language : "",
+                            request
                     ));
                 })
                 .exceptionally(ex -> {
                     System.err.println("Error fetching sources: " + ex.getMessage());
                     return internalServerError("Error fetching sources");
                 });
-
-
     }
 
     /**
@@ -307,5 +325,65 @@ public class HomeController extends Controller {
 
             return ok(views.html.sourceProfile.render(profile,last10));
         });
+    }
+
+    private boolean sameOriginCheck(Http.RequestHeader rh) {
+        final Optional<String> origin = rh.header("Origin");
+
+        if (! origin.isPresent()) {
+            logger.error("originCheck: rejecting request because no Origin header found");
+            return false;
+        } else if (originMatches(origin.get())) {
+            logger.debug("originCheck: originValue = " + origin);
+            return true;
+        } else {
+            logger.error("originCheck: rejecting request because Origin header value " + origin + " is not in the same origin: "
+                    + String.join(", ", validOrigins));
+            return false;
+        }
+    }
+
+    private boolean originMatches(String actualOrigin) {
+        return validOrigins.stream().parallel().anyMatch(actualOrigin::contains); //Changed from lab to parallel since we are using anyMatch here
+    }
+
+    public WebSocket ws() {
+        return WebSocket.Json.acceptOrResult(request -> {
+            if (sameOriginCheck(request)) {
+                final CompletionStage<Flow<JsonNode, JsonNode, NotUsed>> future = wsFutureFlow(request);
+                final CompletionStage<Either<Result, Flow<JsonNode, JsonNode, ?>>> stage = future.thenApply(Either::Right);
+                return stage.exceptionally(this::logException);
+            } else {
+                return forbiddenResult();
+            }
+        });
+    }
+
+    @SuppressWarnings("unchecked")
+    private CompletionStage<Flow<JsonNode, JsonNode, NotUsed>> wsFutureFlow(Http.RequestHeader request) {
+        String id = Long.toString(request.asScala().id());
+        Scheduler scheduler = Adapter.toTyped(system.scheduler());
+        Duration timeout = Duration.ofSeconds(5);
+
+        return AskPattern.<UserParentActor.Create, Flow<JsonNode, JsonNode, NotUsed>>ask(
+                userParentActor,
+                replyTo -> new UserParentActor.Create(id, replyTo),
+                timeout,
+                scheduler
+        ).thenApply(f -> f.named("websocket"));
+    }
+
+
+    private CompletionStage<Either<Result, Flow<JsonNode, JsonNode, ?>>> forbiddenResult() {
+        final Result forbidden = Results.forbidden("forbidden");
+        final Either<Result, Flow<JsonNode, JsonNode, ?>> left = Either.Left(forbidden);
+
+        return CompletableFuture.completedFuture(left);
+    }
+
+    private Either<Result, Flow<JsonNode, JsonNode, ?>> logException(Throwable throwable) {
+        logger.error("Cannot create websocket", throwable);
+        Result result = Results.internalServerError("error");
+        return Either.Left(result);
     }
 }
