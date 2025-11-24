@@ -1,0 +1,88 @@
+import actors.*;
+import org.apache.pekko.actor.ActorSystem;
+import org.apache.pekko.actor.typed.ActorRef;
+import org.apache.pekko.actor.typed.javadsl.Adapter;
+import play.libs.ws.WSClient;
+import com.google.inject.AbstractModule;
+import com.google.inject.TypeLiteral;
+import com.typesafe.config.Config;
+import play.libs.pekko.PekkoGuiceSupport;
+
+import javax.inject.Inject;
+import javax.inject.Provider;
+import javax.inject.Singleton;
+
+@SuppressWarnings("unused")
+public class Module extends AbstractModule implements PekkoGuiceSupport {
+    @Override
+    protected void configure() {
+        bind(new TypeLiteral<ActorRef<SourcesActor.GetSources>>() {})
+                .toProvider(SourcesActorProvider.class)
+                .asEagerSingleton();
+        bind(new TypeLiteral<ActorRef<UserParentActor.Create>>() {})
+                .toProvider(UserParentActorProvider.class)
+                .asEagerSingleton();
+        bind(UserActor.Factory.class).toProvider(UserActorFactoryProvider.class);
+    }
+
+    @Singleton
+    public static class SourcesActorProvider implements Provider<ActorRef<SourcesActor.GetSources>> {
+        private final ActorSystem actorSystem;
+
+        @Inject
+        public SourcesActorProvider(ActorSystem actorSystem) {
+            this.actorSystem = actorSystem;
+        }
+
+        @Override
+        public ActorRef<SourcesActor.GetSources> get() {
+            return Adapter.spawn(
+                    actorSystem,
+                    SourcesActor.create(),
+                    "sourcesActor");
+        }
+    }
+
+    @Singleton
+    public static class UserParentActorProvider implements Provider<ActorRef<UserParentActor.Create>> {
+        private final ActorSystem actorSystem;
+        private final UserActor.Factory childFactory;
+        private final Config config;
+
+        @Inject
+        public UserParentActorProvider(
+                ActorSystem actorSystem, UserActor.Factory childFactory, Config config
+        ) {
+            this.actorSystem = actorSystem;
+            this.childFactory = childFactory;
+            this.config = config;
+        }
+
+        @Override
+        public ActorRef<UserParentActor.Create> get() {
+            return Adapter.spawn(
+                    actorSystem,
+                    UserParentActor.create(childFactory, config),
+                    "userParentActor");
+        }
+    }
+
+    @Singleton
+    public static class UserActorFactoryProvider implements Provider<UserActor.Factory> {
+        private final ActorRef<SourcesActor.GetSources> sourcesActor;
+        private final WSClient ws;
+        private final Config config;
+
+        @Inject
+        public UserActorFactoryProvider(ActorRef<SourcesActor.GetSources> sourcesActor, WSClient ws, Config config) {
+            this.sourcesActor = sourcesActor;
+            this.ws = ws;
+            this.config = config;
+        }
+
+        @Override
+        public UserActor.Factory get() {
+            return id -> UserActor.create(id, sourcesActor, ws, config);
+        }
+    }
+}
