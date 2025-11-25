@@ -3,6 +3,7 @@ package actors;
 import org.apache.pekko.NotUsed;
 import org.apache.pekko.actor.typed.ActorRef;
 import org.apache.pekko.actor.typed.Behavior;
+import org.apache.pekko.actor.typed.SupervisorStrategy;
 import org.apache.pekko.actor.typed.javadsl.Behaviors;
 import org.apache.pekko.stream.javadsl.Flow;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -15,8 +16,13 @@ public final class UserParentActor {
         return Behaviors.setup(context -> {
             return Behaviors.receive(Create.class)
                     .onMessage(Create.class, create -> {
+                        Behavior<UserActor.Message> childBehavior = Behaviors.supervise(
+                                        childFactory.create(create.id)
+                                )
+                                .onFailure(SupervisorStrategy.restart());
+
                         ActorRef<UserActor.Message> child = context.spawn(
-                                childFactory.create(create.id),
+                                childBehavior,
                                 "userActor-" + create.id
                         );
                         child.tell(new GetFlow(create.replyTo));
