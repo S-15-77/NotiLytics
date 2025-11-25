@@ -1,12 +1,15 @@
 import actors.*;
 import org.apache.pekko.actor.ActorSystem;
 import org.apache.pekko.actor.typed.ActorRef;
+import org.apache.pekko.actor.typed.Behavior;
 import org.apache.pekko.actor.typed.javadsl.Adapter;
 import play.libs.ws.WSClient;
 import com.google.inject.AbstractModule;
 import com.google.inject.TypeLiteral;
 import com.typesafe.config.Config;
 import play.libs.pekko.PekkoGuiceSupport;
+import org.apache.pekko.actor.typed.SupervisorStrategy;
+import org.apache.pekko.actor.typed.javadsl.Behaviors;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -60,9 +63,13 @@ public class Module extends AbstractModule implements PekkoGuiceSupport {
 
         @Override
         public ActorRef<UserParentActor.Create> get() {
+            Behavior<UserParentActor.Create> supervised = Behaviors.supervise(
+                    UserParentActor.create(childFactory, config)
+            ).onFailure(SupervisorStrategy.restart());
+
             return Adapter.spawn(
                     actorSystem,
-                    UserParentActor.create(childFactory, config),
+                    supervised,
                     "userParentActor");
         }
     }
