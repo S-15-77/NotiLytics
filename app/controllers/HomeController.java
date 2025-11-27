@@ -1,11 +1,13 @@
 package controllers;
 
+import actors.ReadabilityActor;
 import actors.UserParentActor;
 import models.Article;
 import models.QueryResult;
 import models.ReadabilityCalculator;
 import models.SourceProfile;
 import models.Statistics;
+import org.apache.pekko.actor.typed.RecipientRef;
 import play.mvc.*;
 import play.libs.ws.*;
 import com.typesafe.config.Config;
@@ -27,6 +29,8 @@ import org.apache.pekko.actor.typed.Scheduler;
 import org.apache.pekko.actor.typed.javadsl.Adapter;
 import org.apache.pekko.actor.typed.javadsl.AskPattern;
 import org.apache.pekko.actor.ActorSystem;
+import views.html.index;
+
 import java.time.Duration;
 
 /**
@@ -43,6 +47,7 @@ public class HomeController extends Controller {
     private final List<String> validOrigins = Arrays.asList("localhost:9000"); //We only need a single origin for now, can expand later if need be
     private final ActorSystem system;
     private final ActorRef<UserParentActor.Create> userParentActor;
+    private final ActorRef<ReadabilityActor.Command> readabilityActor;
     Map<String, QueryResult> cache = new LinkedHashMap<>();
 
     private static final String SESSION_KEY = "queries";
@@ -136,13 +141,14 @@ public class HomeController extends Controller {
      * @author Team
      */
     @Inject
-    public HomeController(WSClient ws, Executor executor, Config config, ActorSystem system, ActorRef<UserParentActor.Create> userParentActor) {
+    public HomeController(WSClient ws, Executor executor, Config config, ActorSystem system, ActorRef<UserParentActor.Create> userParentActor,ActorRef<ReadabilityActor.Command> readabilityActor) {
         this.ws = ws;
         this.executor = executor;
         this.Key = config.getString("newsapi.key");
         this.url = config.getString("newsapi.url");
         this.system = system;
         this.userParentActor = userParentActor;
+        this.readabilityActor = readabilityActor;
     }
 
     /**
@@ -165,6 +171,72 @@ public class HomeController extends Controller {
      * @return The rendered result.
      * @author Karim , Santhosh, Ilyes
      */
+//    public CompletionStage<Result> search(Http.Request request) {
+//        String searchInput = request.getQueryString("SearchInput");
+//        String sortBy = Optional.ofNullable(request.getQueryString("sortBy")).orElse("publishedAt");
+//
+//        String showSourcesParam = request.getQueryString("showSources");
+//        boolean showSources = showSourcesParam != null && showSourcesParam.equals("true");
+//
+//        if (searchInput == null || searchInput.trim().isEmpty()) {
+//            Map<String, QueryResult> empty = new LinkedHashMap<>();
+//            return CompletableFuture.completedFuture(ok(views.html.index.render("Please enter a search term.", empty, true, request)));
+//        }
+//
+//        Http.Session updatedSession = updateSession(request.session(), searchInput, getMaxArticlesVisible());
+//        List<String> queries = getPreviousQueries(updatedSession);
+//
+//        String encodedQuery = searchInput.trim().replaceAll("\\s+", "+");
+//
+//        // Simple URL construction without filters
+//        String requestUrl = this.url + "q=" + encodedQuery + "&sortBy=" + sortBy + "&pageSize=" + getMaxArticlesVisible() + "&apiKey=" + this.Key;
+//
+//        Client client = new Client(this.ws);
+//        CompletionStage<List<Article>> response = client.clientRequest(requestUrl);
+//
+//        return response.thenApplyAsync(articles -> {
+//            List<String> descriptions = articles.stream()
+//                    .map(a -> a.getTitle() != null ? a.getTitle() : "")
+//                    .collect(Collectors.toList());
+//
+//            // Ask the readability actor (timeout 5s)
+//            Scheduler scheduler = Adapter.toTyped(system.scheduler());
+//            Duration askTimeout = Duration.ofSeconds(5);
+//
+//
+//            return AskPattern.<ReadabilityActor.Command, ReadabilityActor.Result>ask(
+//                    readabilityActor,
+//                    replyTo -> new ReadabilityActor.Calculate(descriptions, replyTo),
+//                    askTimeout,
+//                    scheduler
+//            ).thenApply(readResult -> {
+//                double avgGrade = readResult.averageGrade;
+//                double avgScore = readResult.averageScore;
+//
+//                QueryResult qr = new QueryResult(searchInput, articles, avgGrade, avgScore);
+//
+//                cache.put(searchInput, qr);
+//
+//                Map<String, QueryResult> resultsByQuery = new LinkedHashMap<>();
+//                int count = 0; //to use with maxArticlesVisible
+//                for (String q : queries) {
+//                    if (count >= maxArticlesVisible) break;
+//                    QueryResult r = cache.get(q);
+//                    if (r != null)
+//                        resultsByQuery.put(q, r); //Ensures no NullPointerException if we get a bad call when testing for example
+//                    count++;
+//                }
+//
+//                return ok(index.render("Search Results for: " + searchInput, resultsByQuery, showSources, request))
+//                        .withSession(updatedSession);
+//            });
+//
+//        }, executor).exceptionally(ex -> {
+//            System.err.println("Error fetching results: " + ex.getMessage());
+//            return internalServerError("Error fetching results: " + ex.getMessage());
+//        });
+//    }
+
     public CompletionStage<Result> search(Http.Request request) {
         String searchInput = request.getQueryString("SearchInput");
         String sortBy = Optional.ofNullable(request.getQueryString("sortBy")).orElse("publishedAt");
@@ -174,7 +246,9 @@ public class HomeController extends Controller {
 
         if (searchInput == null || searchInput.trim().isEmpty()) {
             Map<String, QueryResult> empty = new LinkedHashMap<>();
-            return CompletableFuture.completedFuture(ok(views.html.index.render("Please enter a search term.", empty, true, request)));
+            return CompletableFuture.completedFuture(
+                    ok(views.html.index.render("Please enter a search term.", empty, true, request))
+            );
         }
 
         Http.Session updatedSession = updateSession(request.session(), searchInput, getMaxArticlesVisible());
@@ -182,39 +256,59 @@ public class HomeController extends Controller {
 
         String encodedQuery = searchInput.trim().replaceAll("\\s+", "+");
 
-        // Simple URL construction without filters
-        String requestUrl = this.url + "q=" + encodedQuery + "&sortBy=" + sortBy + "&pageSize=" + getMaxArticlesVisible() + "&apiKey=" + this.Key;
+        String requestUrl = this.url
+                + "q=" + encodedQuery
+                + "&sortBy=" + sortBy
+                + "&pageSize=" + getMaxArticlesVisible()
+                + "&apiKey=" + this.Key;
 
         Client client = new Client(this.ws);
         CompletionStage<List<Article>> response = client.clientRequest(requestUrl);
 
-        return response.thenApplyAsync(articles -> {
-            List<String> descriptions = articles.stream()
-                    .map(a -> a.getTitle() != null ? a.getTitle() : "")
-                    .collect(Collectors.toList());
-            double avgGrade = ReadabilityCalculator.averageGrade(descriptions);
-            double avgScore = ReadabilityCalculator.averageScore(descriptions);
-            QueryResult qr = new QueryResult(searchInput, articles, avgGrade, avgScore);
+        return response
+                .thenComposeAsync(articles -> {   // 🔁 use thenComposeAsync, not thenApplyAsync
+                    List<String> descriptions = articles.stream()
+                            .map(a -> a.getTitle() != null ? a.getTitle() : "")
+                            .collect(Collectors.toList());
 
-            cache.put(searchInput, qr);
+                    Scheduler scheduler = Adapter.toTyped(system.scheduler());
+                    Duration askTimeout = Duration.ofSeconds(5);
 
-            Map<String, QueryResult> resultsByQuery = new LinkedHashMap<>();
-            int count = 0; //to use with maxArticlesVisible
-            for (String q : queries) {
-                if (count >= maxArticlesVisible) break;
-                QueryResult r = cache.get(q);
-                if (r != null)
-                    resultsByQuery.put(q, r); //Ensures no NullPointerException if we get a bad call when testing for example
-                count++;
-            }
+                    return AskPattern.<ReadabilityActor.Command, ReadabilityActor.Result>ask(
+                            readabilityActor,                                   // make sure this is injected
+                            replyTo -> new ReadabilityActor.Calculate(descriptions, replyTo),
+                            askTimeout,
+                            scheduler
+                    ).thenApply(readResult -> {
+                        double avgGrade = readResult.averageGrade;
+                        double avgScore = readResult.averageScore;
 
-            return ok(views.html.index.render("Search Results for: " + searchInput, resultsByQuery, showSources, request))
-                    .withSession(updatedSession);
+                        QueryResult qr = new QueryResult(searchInput, articles, avgGrade, avgScore);
+                        cache.put(searchInput, qr);
 
-        }, executor).exceptionally(ex -> {
-            System.err.println("Error fetching results: " + ex.getMessage());
-            return internalServerError("Error fetching results: " + ex.getMessage());
-        });
+                        Map<String, QueryResult> resultsByQuery = new LinkedHashMap<>();
+                        int count = 0;
+                        for (String q : queries) {
+                            if (count >= maxArticlesVisible) break;
+                            QueryResult r = cache.get(q);
+                            if (r != null) {
+                                resultsByQuery.put(q, r);
+                            }
+                            count++;
+                        }
+
+                        return ok(views.html.index.render(
+                                "Search Results for: " + searchInput,
+                                resultsByQuery,
+                                showSources,
+                                request
+                        )).withSession(updatedSession);
+                    });
+                }, executor)
+                .exceptionally(ex -> {          // 🔁 now T is Result, so return Result
+                    System.err.println("Error fetching results: " + ex.getMessage());
+                    return internalServerError("Error fetching results: " + ex.getMessage());
+                });
     }
 
     /**

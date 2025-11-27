@@ -26,6 +26,11 @@ public class Module extends AbstractModule implements PekkoGuiceSupport {
                 .toProvider(UserParentActorProvider.class)
                 .asEagerSingleton();
         bind(UserActor.Factory.class).toProvider(UserActorFactoryProvider.class);
+
+        // Bind a provider for the ReadabilityActor so it can be injected elsewhere
+        bind(new TypeLiteral<ActorRef<ReadabilityActor.Command>>() {})
+                .toProvider(ReadabilityActorProvider.class)
+                .asEagerSingleton();
     }
 
     @Singleton
@@ -90,6 +95,26 @@ public class Module extends AbstractModule implements PekkoGuiceSupport {
         @Override
         public UserActor.Factory get() {
             return id -> UserActor.create(id, sourcesActor, ws, config);
+        }
+    }
+
+    // New provider for ReadabilityActor
+    @Singleton
+    public static class ReadabilityActorProvider implements Provider<ActorRef<ReadabilityActor.Command>> {
+        private final ActorSystem actorSystem;
+
+        @Inject
+        public ReadabilityActorProvider(ActorSystem actorSystem) {
+            this.actorSystem = actorSystem;
+        }
+
+        @Override
+        public ActorRef<ReadabilityActor.Command> get() {
+            // Spawn a top-level ReadabilityActor. It can be used as a singleton service.
+            return Adapter.spawn(
+                    actorSystem,
+                    ReadabilityActor.create(),
+                    "readabilityActor");
         }
     }
 }
