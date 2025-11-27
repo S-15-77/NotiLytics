@@ -59,8 +59,8 @@ public class Client implements WSBodyReadables, WSBodyWritables {
                         String sourceUrl = buildSourceUrl(sourceName);
                         String publishedAt = convertToEDT(articleNode.get("publishedAt").asText("Unknown Date"));
                         String description = articleNode.get("description").asText("No description");
-                        int kincaidGrade = 5;
-                        int readingScore = 5;
+                        int kincaidGrade = 0;
+                        int readingScore = 0;
 
                         return new Article(title, urlToArticle, sourceName, sourceUrl, publishedAt,kincaidGrade, readingScore, description);
                     })
