@@ -2,6 +2,7 @@ package controllers;
 
 import actors.ReadabilityActor;
 import actors.UserParentActor;
+import actors.SourceProfileActor;
 import models.Article;
 import models.QueryResult;
 import models.ReadabilityCalculator;
@@ -48,6 +49,7 @@ public class HomeController extends Controller {
     private final ActorSystem system;
     private final ActorRef<UserParentActor.Create> userParentActor;
     private final ActorRef<ReadabilityActor.Command> readabilityActor;
+    private final ActorRef<SourceProfileActor.Command> profileActor;
     Map<String, QueryResult> cache = new LinkedHashMap<>();
 
     private static final String SESSION_KEY = "queries";
@@ -141,7 +143,13 @@ public class HomeController extends Controller {
      * @author Team
      */
     @Inject
-    public HomeController(WSClient ws, Executor executor, Config config, ActorSystem system, ActorRef<UserParentActor.Create> userParentActor,ActorRef<ReadabilityActor.Command> readabilityActor) {
+    public HomeController(WSClient ws,
+                          Executor executor,
+                          Config config,
+                          ActorSystem system,
+                          ActorRef<UserParentActor.Create> userParentActor,
+                          ActorRef<ReadabilityActor.Command> readabilityActor,
+                          ActorRef<SourceProfileActor.Command> profileActor) {
         this.ws = ws;
         this.executor = executor;
         this.Key = config.getString("newsapi.key");
@@ -149,6 +157,7 @@ public class HomeController extends Controller {
         this.system = system;
         this.userParentActor = userParentActor;
         this.readabilityActor = readabilityActor;
+        this.profileActor = profileActor;
     }
 
     /**
@@ -358,33 +367,45 @@ public class HomeController extends Controller {
      * @return the rendered result.
      * @author Haytham
      */
+//    public CompletionStage<Result> profile(String sourceName, String id) {
+//
+//        String requestUrl = this.url + "sources=" + (id != null ? id : sourceName) + "&apiKey=" + this.Key;
+//
+//        Client client = new Client(this.ws);
+//
+//        CompletionStage<List<Article>> response = client.clientRequest(requestUrl);
+//
+//        return response.thenApply(articles -> {
+//
+//            if (articles == null || articles.isEmpty()) {
+//                return ok(views.html.sourceProfile.render(
+//                        new SourceProfile(sourceName, "", "No Articles Found for this source at this time. Please try again later!"),
+//                        new ArrayList<>()
+//                ));
+//            }
+//
+//            List<Article> last10 = articles.stream().limit(10).toList();
+//
+//            SourceProfile profile = new SourceProfile(
+//                    sourceName,
+//                    last10.get(0).getSourceUrl(),
+//                    "Listing Articles from " + sourceName + "."
+//            );
+//
+//            return ok(views.html.sourceProfile.render(profile,last10));
+//        });
+//    }
+
     public CompletionStage<Result> profile(String sourceName, String id) {
+        Scheduler scheduler = Adapter.toTyped(system.scheduler());
 
-        String requestUrl = this.url + "sources=" + (id != null ? id : sourceName) + "&apiKey=" + this.Key;
+        return AskPattern.ask(
+                profileActor,
+                replyTo -> new SourceProfileActor.ProfileRequest(sourceName, id, replyTo),
+                Duration.ofSeconds(5),
+                scheduler
+        );
 
-        Client client = new Client(this.ws);
-
-        CompletionStage<List<Article>> response = client.clientRequest(requestUrl);
-
-        return response.thenApply(articles -> {
-
-            if (articles == null || articles.isEmpty()) {
-                return ok(views.html.sourceProfile.render(
-                        new SourceProfile(sourceName, "", "No Articles Found for this source at this time. Please try again later!"),
-                        new ArrayList<>()
-                ));
-            }
-
-            List<Article> last10 = articles.stream().limit(10).toList();
-
-            SourceProfile profile = new SourceProfile(
-                    sourceName,
-                    last10.get(0).getSourceUrl(),
-                    "Listing Articles from " + sourceName + "."
-            );
-
-            return ok(views.html.sourceProfile.render(profile,last10));
-        });
     }
 
     private boolean sameOriginCheck(Http.RequestHeader rh) {

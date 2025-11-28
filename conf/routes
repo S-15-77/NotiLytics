@@ -10,5 +10,6 @@ GET     /assets/*file   controllers.Assets.versioned(path="/public", file: Asset
 GET     /sources              controllers.HomeController.sources(request: Request)
 GET     /statistics/:key     controllers.HomeController.stats(request: Request, key: String)
 GET     /source/:sourceName   controllers.HomeController.profile(sourceName: String, id: String)
+GET     /profile/:sourceName/:id   controllers.HomeController.profile(sourceName: String, id: String)
 
 GET     /ws                         controllers.HomeController.ws
