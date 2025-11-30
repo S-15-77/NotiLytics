@@ -3,13 +3,20 @@ $ ->
 
   ws.onopen = ->
     console.log("WebSocket connected for sources")
-    sendFilterRequest()
+    country = getUrlParameter('country') || ''
+    category = getUrlParameter('category') || ''
+    language = getUrlParameter('language') || ''
+
+    sendFilterRequest(country, category, language)
 
   ws.onmessage = (event) ->
-    console.log("Received source update:", event.data)
-    message = JSON.parse event.data
-    if message.type is "sources"
-      updateSourcesTableDynamically(message.data)
+    console.log("Received message:", event.data)
+    try
+      data = JSON.parse(event.data)
+      if data.type == "sources"
+        handleSourcesUpdate(data.data)
+    catch error
+      console.error("Error parsing message:", error)
 
   ws.onerror = (error) ->
     console.error("WebSocket error:", error)
@@ -17,32 +24,59 @@ $ ->
   ws.onclose = ->
     console.log("WebSocket closed")
 
-  $("form").first().submit (event) ->
-    event.preventDefault()
-    sendFilterRequest()
+  sendFilterRequest = (country, category, language) ->
+    message =
+      type: "filter"
+      country: country
+      category: category
+      language: language
 
-  sendFilterRequest = ->
-    filters =
-      country: $("#country").val()
-      category: $("#category").val()
-      language: $("#language").val()
+    console.log("Sending filter request:", message)
+    ws.send(JSON.stringify(message))
 
-    console.log("Sending filter request:", filters)
-    ws.send(JSON.stringify(filters))
+  handleSourcesUpdate = (sources) ->
+    console.log("Received #{sources.length} sources")
 
-  updateSourcesTableDynamically = (sources) ->
+    # Clear existing table body
     tbody = $("table tbody")
     tbody.empty()
 
-    if sources and sources.length > 0
-      $.each sources, (index, source) ->
-        row = $("<tr>")
-        row.append($("<td>").html("<strong><a href='/profile/" + source.name + "/" + source.id + "'>" + source.name + "</a></strong>"))
-        row.append($("<td>").text(source.description))
-        row.append($("<td>").text(source.category))
-        row.append($("<td>").text(source.language))
-        row.append($("<td>").text(source.country))
-        row.append($("<td>").html("<a href='" + source.url + "' target='_blank'>Visit</a>"))
+    # Populate table with new sources
+    if sources && sources.length > 0
+      for source in sources
+        row = """
+          <tr>
+            <td><strong><a href="/profile/#{encodeURIComponent(source.name)}/#{encodeURIComponent(source.id || source.name)}">#{escapeHtml(source.name)}</a></strong></td>
+            <td>#{escapeHtml(source.description || '')}</td>
+            <td>#{escapeHtml(source.category || '')}</td>
+            <td>#{escapeHtml(source.language || '')}</td>
+            <td>#{escapeHtml(source.country || '')}</td>
+            <td><a href="#{escapeHtml(source.url)}" target="_blank">Visit</a></td>
+          </tr>
+        """
         tbody.append(row)
 
-      $("p strong").text("Total sources: " + sources.length)
+      # Update count
+      $("p strong").first().text("Total sources: #{sources.length}")
+    else
+      tbody.append("<tr><td colspan='6'>No sources found</td></tr>")
+
+  # Handle form submission
+  $("form").on "submit", (e) ->
+    e.preventDefault()
+
+    country = $("#country").val() || ''
+    category = $("#category").val() || ''
+    language = $("#language").val() || ''
+
+    sendFilterRequest(country, category, language)
+
+  escapeHtml = (text) ->
+    return '' unless text
+    $('<div>').text(text).html()
+
+  getUrlParameter = (name) ->
+    name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]')
+    regex = new RegExp('[\\?&]' + name + '=([^&#]*)')
+    results = regex.exec(location.search)
+    if results == null then '' else decodeURIComponent(results[1].replace(/\+/g, ' '))
