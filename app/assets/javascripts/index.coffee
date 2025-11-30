@@ -47,7 +47,21 @@ $ ->
 
     console.log("Initial results for: #{query}, #{articles.length} articles")
 
+    $("#results-#{slugify(query)}").remove()
+
     articlesByQuery[query] = articles
+
+    existingQueries = []
+    $("#results-container > div").each ->
+      id = $(this).attr("id")
+      if id && id.startsWith("results-")
+        existingQueries.push(id)
+
+    while existingQueries.length >= 10
+      oldestId = existingQueries.pop()
+      $("##{oldestId}").remove()
+      console.log("Removed oldest query from display: #{oldestId}")
+
     $("#message-header").html("Search Results for: #{escapeHtml(query)}")
     $("#welcome-message").hide()
 
