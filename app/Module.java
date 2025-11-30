@@ -1,4 +1,5 @@
 import actors.*;
+import models.QueryResult;
 import org.apache.pekko.actor.ActorSystem;
 import org.apache.pekko.actor.typed.ActorRef;
 import org.apache.pekko.actor.typed.Behavior;
@@ -27,6 +28,10 @@ public class Module extends AbstractModule implements PekkoGuiceSupport {
                 .asEagerSingleton();
         bind(UserActor.Factory.class).toProvider(UserActorFactoryProvider.class);
 
+        bind(new TypeLiteral<ActorRef<QueryResultActor.Message>>() {})
+                .toProvider(QueryResultActorProvider.class)
+                .asEagerSingleton();
+
         // Bind a provider for the ReadabilityActor so it can be injected elsewhere
         bind(new TypeLiteral<ActorRef<ReadabilityActor.Command>>() {})
                 .toProvider(ReadabilityActorProvider.class)
@@ -52,6 +57,25 @@ public class Module extends AbstractModule implements PekkoGuiceSupport {
     }
 
     @Singleton
+    public static class QueryResultActorProvider implements Provider<ActorRef<QueryResultActor.Message>> {
+        private final ActorSystem actorSystem;
+
+        @Inject
+        public QueryResultActorProvider(ActorSystem actorSystem) {
+            this.actorSystem = actorSystem;
+        }
+
+        @Override
+        public ActorRef<QueryResultActor.Message> get() {
+            return Adapter.spawn(
+                    actorSystem,
+                    QueryResultActor.create(),
+                    "queryResultActor");
+        }
+    }
+
+
+    @Singleton
     public static class UserParentActorProvider implements Provider<ActorRef<UserParentActor.Create>> {
         private final ActorSystem actorSystem;
         private final UserActor.Factory childFactory;
@@ -71,7 +95,6 @@ public class Module extends AbstractModule implements PekkoGuiceSupport {
             Behavior<UserParentActor.Create> supervised = Behaviors.supervise(
                     UserParentActor.create(childFactory, config)
             ).onFailure(SupervisorStrategy.restart());
-
             return Adapter.spawn(
                     actorSystem,
                     supervised,
@@ -84,17 +107,21 @@ public class Module extends AbstractModule implements PekkoGuiceSupport {
         private final ActorRef<SourcesActor.GetSources> sourcesActor;
         private final WSClient ws;
         private final Config config;
+        private final ActorRef<ReadabilityActor.Command> readabilityActor;
 
         @Inject
-        public UserActorFactoryProvider(ActorRef<SourcesActor.GetSources> sourcesActor, WSClient ws, Config config) {
+        public UserActorFactoryProvider(ActorRef<SourcesActor.GetSources> sourcesActor,
+                                        ActorRef<ReadabilityActor.Command> readabilityActor,
+                                        WSClient ws, Config config) {
             this.sourcesActor = sourcesActor;
+            this.readabilityActor = readabilityActor;
             this.ws = ws;
             this.config = config;
         }
 
         @Override
         public UserActor.Factory get() {
-            return id -> UserActor.create(id, sourcesActor, ws, config);
+            return id -> UserActor.create(id, sourcesActor, readabilityActor, ws, config);
         }
     }
 
