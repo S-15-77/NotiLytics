@@ -143,8 +143,7 @@
                     @for((query, result) <- collection.JavaConverters.mapAsScalaMap(resultsByQuery).toSeq) {
                         <div>
                             <h4>Search: "@query" (10 latest results)</h4>
-                            <button onclick="window.location.href='/statistics/@query'">Statistics</button>
-                            <p><strong>Average Flesch-Kincaid Grade Level:</strong> @result.getAvgGrade().formatted("%.2f")</p>
+                            <button onclick="window.open('/statistics/@query', '_blank')">Statistics</button>                            <p><strong>Average Flesch-Kincaid Grade Level:</strong> @result.getAvgGrade().formatted("%.2f")</p>
                             <p><strong>Average Flesch Reading Score:</strong> @result.getAvgScore().formatted("%.2f")</p>
 
                             @if(result.getArticles() != null && !result.getArticles().isEmpty()) {

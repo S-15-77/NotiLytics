@@ -72,15 +72,22 @@ $ ->
     query = data.query
     newArticles = data.articles
 
-    console.log("Update: #{newArticles.length} new articles for #{query}")
+    console.log("!!! UPDATE RECEIVED !!!")
+    console.log("Query:", query)
+    console.log("Number of new articles:", newArticles.length)
+    console.log("New articles:", newArticles)
 
     if articlesByQuery[query]
       articlesByQuery[query] = articlesByQuery[query].concat(newArticles)
     else
       articlesByQuery[query] = newArticles
 
-    newArticlesHtml = buildArticlesHtml(newArticles)
-    $("#results-#{slugify(query)} ul").prepend(newArticlesHtml)
+    if newArticles.length > 0
+      newArticlesHtml = buildArticlesHtml(newArticles)
+      $("#results-#{slugify(query)} ul").prepend(newArticlesHtml)
+      console.log("Added #{newArticles.length} articles to the DOM")
+    else
+      console.log("No new articles to display")
 
   handleSources = (data) ->
     console.log("Received sources:", data.data)
@@ -90,7 +97,7 @@ $ ->
     """
     <div id="results-#{slugify(query)}">
       <h4>Search: "#{escapeHtml(query)}" (10 latest results)</h4>
-      <button onclick="window.location.href='/statistics/#{encodeURIComponent(query)}'">Statistics</button>
+      <button onclick="window.open('/statistics/#{encodeURIComponent(query)}', '_blank')">Statistics</button>
       <p><strong>Average Flesch-Kincaid Grade Level:</strong> #{readability.avgGrade.toFixed(2)}</p>
       <p><strong>Average Flesch Reading Score:</strong> #{readability.avgScore.toFixed(2)}</p>
       <ul>
@@ -103,6 +110,14 @@ $ ->
   buildArticlesHtml = (articles) ->
     html = ""
     for article in articles
+      d = new Date(article.publishedAt)
+      yyyy = d.getFullYear()
+      mm = String(d.getMonth() + 1).padStart(2, '0')
+      dd = String(d.getDate()).padStart(2, '0')
+      hh = String(d.getHours()).padStart(2, '0')
+      min = String(d.getMinutes()).padStart(2, '0')
+      formatted = "#{yyyy}-#{mm}-#{dd} #{hh}:#{min}"
+
       html += """
         <li>
           <strong><a href="#{escapeHtml(article.url)}" target="_blank">#{escapeHtml(article.title)}</a></strong><br>
@@ -114,7 +129,7 @@ $ ->
         """
 
       html += """
-          Published: #{escapeHtml(article.publishedAt)}<br>
+          Published: #{formatted}<br>
           Flesch-Kincaid Grade Level: 0.0<br>
           Flesch Reading Score: 0.0
         </li>
