@@ -48,30 +48,30 @@ public class HomeController extends Controller {
     private final ActorSystem system;
     private final ActorRef<UserParentActor.Create> userParentActor;
     private final ActorRef<ReadabilityActor.Command> readabilityActor;
-//    Map<String, QueryResult> cache = new LinkedHashMap<>();
+    Map<String, QueryResult> cache = new LinkedHashMap<>();
 
     private static final String SESSION_KEY = "queries";
     private static final int maxArticlesVisible = 50;
 
-//    /**
-//     * Fetches the cache field
-//     *
-//     * @return the cache
-//     * @author Team
-//     */
-//    public Map<String, QueryResult> getCache() {
-//        return this.cache;
-//    }
+    /**
+     * Fetches the cache field
+     *
+     * @return the cache
+     * @author Team
+     */
+    public Map<String, QueryResult> getCache() {
+        return this.cache;
+    }
 
-//    /**
-//     * modifies the cache
-//     *
-//     * @return the cache
-//     * @author Team
-//     */
-//    public void setCache(final Map<String, QueryResult> newCache) {
-//        this.cache = newCache;
-//    }
+    /**
+     * modifies the cache
+     *
+     * @param newCache the new cache
+     * @author Team
+     */
+    public void setCache(final Map<String, QueryResult> newCache) {
+        this.cache = newCache;
+    }
 
     /**
      * Fetches the maxArticlesVisible field

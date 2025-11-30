@@ -1,3 +1,5 @@
+import scala.collection.immutable.Seq
+
 name := """notilytics"""
 organization := "com.notilytics"
 
@@ -17,6 +19,17 @@ libraryDependencies ++= Seq(
   "org.apache.pekko" %% "pekko-actor-testkit-typed" % "1.1.2" % Test,
     javaWs,
   ehcache)
+
+libraryDependencies ++= Seq(
+  "org.apache.pekko" %% "pekko-actor" % "1.1.2",
+  "org.apache.pekko" %% "pekko-actor-typed" % "1.1.2",
+  "org.apache.pekko" %% "pekko-actor-testkit-typed" % "1.1.2" % Test,
+  "org.apache.pekko" %% "pekko-slf4j" % "1.1.2",
+  "org.apache.pekko" %% "pekko-testkit" % "1.1.2" % Test,
+  "org.apache.pekko" %% "pekko-protobuf-v3" % "1.1.2",
+  "org.apache.pekko" %% "pekko-serialization-jackson" % "1.1.2",
+  "org.apache.pekko" %% "pekko-stream" % "1.1.2"
+)
 
 
 
