@@ -44,7 +44,6 @@ public class UserActor {
         private InternalStop() {}
     }
 
-    //Timer message for polling to auto update query stuff
     private static final class PollTick implements Message {
         private static final PollTick INSTANCE = new PollTick();
         public static PollTick get() {
@@ -69,22 +68,17 @@ public class UserActor {
     private final Sink<JsonNode, NotUsed> hubSink;
     private final Flow<JsonNode, JsonNode, NotUsed> websocketFlow;
 
-    // Cache to track queries and their results
     private final Map<String, QueryResult> cache = new LinkedHashMap<>();
-    // Track seen articles per query (using URL + title as key)
     private final Map<String, Set<String>> seenArticles = new HashMap<>();
-    // Active search queries
-    private String activeQuery = null;
-    private String activeSortBy = "publishedAt";
 
     public static Behavior<Message> create(String id, ActorRef<GetSources> sourcesActor,
                                            ActorRef<ReadabilityActor.Command> readabilityActor,
                                            WSClient ws, Config config) {
-        return Behaviors.setup(context ->
-                Behaviors.withTimers(timers ->
-                        new UserActor(id, sourcesActor, readabilityActor, ws, config, context, timers).behavior()
-                )
-        );
+        return Behaviors.setup(context -> {
+            return Behaviors.withTimers(timers -> {
+                return new UserActor(id, sourcesActor, readabilityActor, ws, config, context, timers).behavior();
+            });
+        });
     }
 
     @Inject
@@ -105,9 +99,7 @@ public class UserActor {
         this.context = context;
         this.mat = Materializer.matFromSystem(context.getSystem());
 
-        //Start polling timer (every 60 seconds)
-        timers.startTimerAtFixedRate(PollTick.get(), Duration.ofSeconds(5)); //CHANGE HERE TO TEST UPDATES
-        logger.info("TIMER STARTED for user {} CHECK ME IN CONSOLE", id);
+        timers.startTimerAtFixedRate(PollTick.get(), Duration.ofSeconds(60));
 
         Pair<Sink<JsonNode, NotUsed>, Source<JsonNode, NotUsed>> sinkSourcePair =
                 MergeHub.of(JsonNode.class, 16)
@@ -118,7 +110,6 @@ public class UserActor {
         Source<JsonNode, NotUsed> hubSource = sinkSourcePair.second();
 
         Sink<JsonNode, CompletionStage<Done>> jsonSink = Sink.foreach((JsonNode json) -> {
-            logger.info("Received WebSocket message: {}", json);
             handleIncomingMessage(json);
         });
 
@@ -135,8 +126,6 @@ public class UserActor {
             case "filter":
                 handleSourceFilter(json);
                 break;
-            default:
-                logger.warn("Unknown message type: {}", type);
         }
     }
 
@@ -144,30 +133,27 @@ public class UserActor {
         String query = json.has("query") ? json.get("query").asText() : "";
         String sortBy = json.has("sortBy") ? json.get("sortBy").asText() : "publishedAt";
 
+//        System.out.println("handleSearch called for query: " + query);
         if (query.isEmpty()) {
-            logger.warn("Empty search query received");
             return;
         }
-
-        logger.info("Starting search for: {} with sortBy: {}", query, sortBy);
-
-        this.activeQuery = query;
-        this.activeSortBy = sortBy;
 
         if (cache.containsKey(query)) {
             cache.remove(query);
             seenArticles.remove(query);
-            logger.info("Removed existing query to re-add as most recent: {}", query);
+            seenArticles.put(query, new HashSet<>());
+        } else {
+            seenArticles.put(query, new HashSet<>());
         }
 
-        while (cache.size() >= 10) { //Trying to force remove until we keep 10 latest
-            String oldestKey = cache.keySet().iterator().next();
-            cache.remove(oldestKey);
-            seenArticles.remove(oldestKey);
-            logger.info("Removed oldest query from cache: {} (size was {})", oldestKey, cache.size() + 1);
-        }
 
-        seenArticles.put(query, new HashSet<>());
+        //I had a race condition here because it was asynchronous, hence why it was not updating properly lol
+
+        while (cache.size() >= 10) {
+                String oldestKey = cache.keySet().iterator().next();
+                cache.remove(oldestKey);
+                seenArticles.remove(oldestKey);
+        }
 
         fetchAndSendResults(query, sortBy, true);
     }
@@ -177,52 +163,52 @@ public class UserActor {
         String requestUrl = this.url + "q=" + encodedQuery + "&sortBy=" + sortBy +
                 "&pageSize=50&apiKey=" + this.apiKey;
 
-        logger.info("Fetching from: {}", requestUrl);
+//        System.out.println("fetchAndSendResults called");
 
         ws.url(requestUrl)
                 .setRequestTimeout(Duration.ofSeconds(10))
                 .get()
                 .thenAccept(response -> {
+//                    System.out.println("Response received for query: " + query);
                     JsonNode articlesJson = response.asJson();
                     if (articlesJson == null || !articlesJson.has("articles")) {
-                        logger.warn("No articles found in response");
                         return;
                     }
 
                     List<Article> allArticles = parseArticles(articlesJson.get("articles"));
 
-                    // Filter out duplicates
                     Set<String> seen = seenArticles.get(query);
+                    if (seen == null) {
+                        seen = new HashSet<>();
+                        seenArticles.put(query, seen);
+                    }
+
+                    final Set<String> finalSeen = seen;
+
                     List<Article> newArticles = allArticles.stream()
                             .filter(article -> {
                                 String key = getArticleKey(article);
-                                if (seen.contains(key)) {
+                                if (finalSeen.contains(key)) {
                                     return false;
                                 } else {
-                                    seen.add(key);
+                                    finalSeen.add(key);
                                     return true;
                                 }
                             })
                             .collect(Collectors.toList());
 
                     if (isInitial) {
-                        // Send up to 10 initial results
                         List<Article> initial = newArticles.stream().limit(10).collect(Collectors.toList());
                         if (!initial.isEmpty()) {
                             calculateReadabilityAndSend(query, initial, "initial");
                         }
                     } else {
-                        // Send new results as updates
                         if (!newArticles.isEmpty()) {
-                            logger.info("Found {} new articles for query: {}", newArticles.size(), query);
                             calculateReadabilityAndSend(query, newArticles, "update");
-                        } else {
-                            logger.info("No new articles for query: {}", query);
                         }
                     }
                 })
                 .exceptionally(ex -> {
-                    logger.error("Error fetching articles for query: " + query, ex);
                     return null;
                 });
     }
@@ -246,12 +232,25 @@ public class UserActor {
             double avgGrade = readResult.averageGrade;
             double avgScore = readResult.averageScore;
 
+            for (int i = 0; i < articles.size() && i < individualGrades.size(); i++) {
+                Article article = articles.get(i);
+                article = new Article(
+                        article.getTitle(),
+                        article.getUrl(),
+                        article.getSourceName(),
+                        article.getSourceUrl(),
+                        article.getPublishedAt(),
+                        individualGrades.get(i).intValue(),
+                        individualScores.get(i).intValue(),
+                        article.getDescription()
+                );
+                articles.set(i, article);
+            }
+
             QueryResult qr = new QueryResult(query, articles, avgGrade, avgScore);
 
-            // Update cache
             QueryResult existing = cache.get(query);
             if (existing != null) {
-                // Merge with existing articles
                 List<Article> merged = new ArrayList<>(existing.getArticles());
                 merged.addAll(articles);
                 qr = new QueryResult(query, merged,
@@ -260,10 +259,8 @@ public class UserActor {
             }
             cache.put(query, qr);
 
-            // Send to WebSocket with individual scores
             sendArticlesToClient(query, articles, individualGrades, individualScores, avgGrade, avgScore, messageType);
         }).exceptionally(ex -> {
-            logger.error("Error calculating readability", ex);
             return null;
         });
     }
@@ -292,7 +289,6 @@ public class UserActor {
             articleNode.put("sourceName", article.getSourceName());
             articleNode.put("sourceUrl", article.getSourceUrl());
 
-            // Add individual readability scores for this article
             if (individualGrades != null && i < individualGrades.size()) {
                 articleNode.put("kincaidGrade", individualGrades.get(i));
             } else {
@@ -311,8 +307,76 @@ public class UserActor {
 
         Source.<JsonNode>single(message)
                 .runWith(hubSink, mat);
+    }
 
-        logger.info("Sent {} articles to client for query: {} with individual scores", articles.size(), query);
+    private void pollAllQueriesAndSendHistory() {
+        logger.info("Polling all queries for new articles");
+
+        if (cache.isEmpty()) {
+            return;
+        }
+
+        List<String> queriesToPoll = new ArrayList<>(cache.keySet());
+
+        for (String query : queriesToPoll) {
+//            System.out.println("Fetching results for query: " + query);
+            fetchAndSendResults(query, "publishedAt", false);
+        }
+
+        context.getSystem().scheduler().scheduleOnce(
+                Duration.ofSeconds(2),
+                () -> { sendFullHistoryToClient();},
+                context.getSystem().executionContext()
+        );
+    }
+
+    private void sendFullHistoryToClient() {
+        if (cache.isEmpty()) {
+            return;
+        }
+
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode message = mapper.createObjectNode();
+        message.put("type", "history");
+
+        ArrayNode queriesArray = mapper.createArrayNode();
+
+        List<String> queryKeys = new ArrayList<>(cache.keySet());
+        Collections.reverse(queryKeys);
+
+        for (String query : queryKeys) {
+            QueryResult qr = cache.get(query);
+            ObjectNode queryNode = mapper.createObjectNode();
+            queryNode.put("query", query);
+
+            ObjectNode readability = mapper.createObjectNode();
+            readability.put("avgGrade", qr.getAvgGrade());
+            readability.put("avgScore", qr.getAvgScore());
+            queryNode.set("readability", readability);
+
+            List<Article> articles = qr.getArticles();
+
+            ArrayNode articlesArray = mapper.createArrayNode();
+            for (Article article : articles) {
+                ObjectNode articleNode = mapper.createObjectNode();
+                articleNode.put("title", article.getTitle());
+                articleNode.put("description", article.getDescription());
+                articleNode.put("url", article.getUrl());
+                articleNode.put("publishedAt", article.getPublishedAt());
+                articleNode.put("sourceName", article.getSourceName());
+                articleNode.put("sourceUrl", article.getSourceUrl());
+                articleNode.put("kincaidGrade", article.getKincaidGrade());
+                articleNode.put("readingScore", article.getReadingScore());
+                articlesArray.add(articleNode);
+            }
+            queryNode.set("articles", articlesArray);
+            queriesArray.add(queryNode);
+        }
+
+        message.set("queries", queriesArray);
+
+        Source.<JsonNode>single(message)
+                .runWith(hubSink, mat);
     }
 
     private List<Article> parseArticles(JsonNode articlesJson) {
@@ -327,8 +391,8 @@ public class UserActor {
                         node.has("source") && node.get("source").has("url") ?
                                 node.get("source").get("url").asText() : "",
                         node.has("publishedAt") ? node.get("publishedAt").asText() : "",
-                        0, // kincaidGrade - will be calculated later
-                        0, // readingScore - will be calculated later
+                        0,
+                        0,
                         node.has("description") ? node.get("description").asText() : ""
                 );
                 articles.add(article);
@@ -358,8 +422,6 @@ public class UserActor {
             requestUrl += "&language=" + language;
         }
 
-        logger.info("Fetching sources from: {}", requestUrl);
-
         ws.url(requestUrl)
                 .setRequestTimeout(Duration.ofSeconds(10))
                 .get()
@@ -372,10 +434,8 @@ public class UserActor {
 
                     Source.<JsonNode>single(result)
                             .runWith(hubSink, mat);
-                    logger.info("Sent sources to client");
                 })
                 .exceptionally(ex -> {
-                    logger.error("Error fetching sources", ex);
                     return null;
                 });
     }
@@ -388,14 +448,9 @@ public class UserActor {
                     return Behaviors.same();
                 })
                 .onMessage(PollTick.class, tick -> {
-                    logger.info("CHECK ME IN CONSOLE 5 SEONCDS HAVE PASSED Active query: {}", activeQuery);
-                    // Poll for new articles if there's an active search
-                    if (activeQuery != null) {
-                        logger.info("I SHOULD START Polling for new articles for query: {}", activeQuery);
-                        fetchAndSendResults(activeQuery, activeSortBy, false);
-                    } else {
-                        logger.info("No active query to poll");
-                    }
+//                    System.out.println("POLLTICK RECEIVED);
+                    logger.info("Polling all queries for new articles");
+                    pollAllQueriesAndSendHistory();
                     return Behaviors.same();
                 })
                 .onMessageEquals(InternalStop.get(), Behaviors::stopped)
