@@ -316,6 +316,14 @@ public class HomeController extends Controller {
         });
     }
 
+    /**
+     * Validates that the WebSocket request originates from an allowed origin.
+     * Needed to protect against Cross-Site WebSocket Hijacking attacks.
+     * Taken from the Play Framework Websocket example
+     * @param rh The HTTP request header
+     * @return true if origin is valid, false otherwise
+     * @author Ilyes
+     */
     private boolean sameOriginCheck(Http.RequestHeader rh) {
         final Optional<String> origin = rh.header("Origin");
 
@@ -332,10 +340,23 @@ public class HomeController extends Controller {
         }
     }
 
+    /**
+     * Checks if the actual origin contains any valid origin string.
+     * Taken from the Play Framework Websocket example
+     * @param actualOrigin The origin header value
+     * @return true if origin is valid, false otherwise
+     * @author Ilyes
+     */
     private boolean originMatches(String actualOrigin) {
         return validOrigins.stream().parallel().anyMatch(actualOrigin::contains); //Changed from lab to parallel since we are using anyMatch here
     }
 
+    /**
+     * Creates a WebSocket connection for real-time communication after validating origin and creates a user-specific WebSocket flow.
+     * Taken from the Play Framework Websocket example
+     * @return WebSocket connection that accepts JSON messages
+     * @author Ilyes
+     */
     public WebSocket ws() {
         return WebSocket.Json.acceptOrResult(request -> {
             if (sameOriginCheck(request)) {
@@ -348,6 +369,13 @@ public class HomeController extends Controller {
         });
     }
 
+    /**
+     * Creates a WebSocket flow for a specific user by asking UserParentActor.
+     * Taken from the Play Framework Websocket example
+     * @param request The HTTP request header
+     * @return CompletionStage containing the WebSocket flow
+     * @author Ilyes
+     */
     @SuppressWarnings("unchecked")
     private CompletionStage<Flow<JsonNode, JsonNode, NotUsed>> wsFutureFlow(Http.RequestHeader request) {
         String id = Long.toString(request.asScala().id());
@@ -363,6 +391,12 @@ public class HomeController extends Controller {
     }
 
 
+    /**
+     * Creates a forbidden result for rejected WebSocket connections.
+     * Taken from the Play Framework Websocket example
+     * @return CompletionStage with Left(forbidden result)
+     * @author Ilyes
+     */
     private CompletionStage<Either<Result, Flow<JsonNode, JsonNode, ?>>> forbiddenResult() {
         final Result forbidden = Results.forbidden("forbidden");
         final Either<Result, Flow<JsonNode, JsonNode, ?>> left = Either.Left(forbidden);
@@ -370,6 +404,13 @@ public class HomeController extends Controller {
         return CompletableFuture.completedFuture(left);
     }
 
+    /**
+     * Logs exceptions during WebSocket creation and returns error result.
+     * Taken from the Play Framework Websocket example
+     * @param throwable The exception that occurred
+     * @return Either.Left with internal server error
+     * @author Ilyes
+     */
     private Either<Result, Flow<JsonNode, JsonNode, ?>> logException(Throwable throwable) {
         logger.error("Cannot create websocket", throwable);
         Result result = Results.internalServerError("error");
