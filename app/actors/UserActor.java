@@ -44,7 +44,7 @@ public class UserActor {
         private InternalStop() {}
     }
 
-    // Timer message for polling
+    //Timer message for polling to auto update query stuff
     private static final class PollTick implements Message {
         private static final PollTick INSTANCE = new PollTick();
         public static PollTick get() {
@@ -105,8 +105,9 @@ public class UserActor {
         this.context = context;
         this.mat = Materializer.matFromSystem(context.getSystem());
 
-        // Start polling timer (every 60 seconds)
+        //Start polling timer (every 60 seconds)
         timers.startTimerAtFixedRate(PollTick.get(), Duration.ofSeconds(5)); //CHANGE HERE TO TEST UPDATES
+        logger.info("TIMER STARTED for user {} CHECK ME IN CONSOLE", id);
 
         Pair<Sink<JsonNode, NotUsed>, Source<JsonNode, NotUsed>> sinkSourcePair =
                 MergeHub.of(JsonNode.class, 16)
@@ -368,10 +369,13 @@ public class UserActor {
                     return Behaviors.same();
                 })
                 .onMessage(PollTick.class, tick -> {
+                    logger.info("CHECK ME IN CONSOLE 5 SEONCDS HAVE PASSED Active query: {}", activeQuery);
                     // Poll for new articles if there's an active search
                     if (activeQuery != null) {
-                        logger.info("Polling for new articles for query: {}", activeQuery);
+                        logger.info("I SHOULD START Polling for new articles for query: {}", activeQuery);
                         fetchAndSendResults(activeQuery, activeSortBy, false);
+                    } else {
+                        logger.info("No active query to poll");
                     }
                     return Behaviors.same();
                 })
