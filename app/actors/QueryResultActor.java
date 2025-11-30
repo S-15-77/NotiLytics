@@ -14,6 +14,54 @@ import static java.util.Objects.requireNonNull;
 public final class QueryResultActor {
     private QueryResultActor() {}
 
+    // Base interface for all messages
+    public interface Message {}
+
+    // Message classes for WebSocket communication
+    public static final class SearchRequest implements Message {
+        public final String query;
+        public final String sortBy;
+
+        public SearchRequest(String query, String sortBy) {
+            this.query = requireNonNull(query);
+            this.sortBy = sortBy != null ? sortBy : "publishedAt";
+        }
+
+        @Override
+        public String toString() {
+            return "SearchRequest(" + query + ", " + sortBy + ")";
+        }
+    }
+
+    public static final class StopSearch implements Message {
+        public final String query;
+
+        public StopSearch(String query) {
+            this.query = requireNonNull(query);
+        }
+
+        @Override
+        public String toString() {
+            return "StopSearch(" + query + ")";
+        }
+    }
+
+    public static final class NewArticles implements Message {
+        public final String query;
+        public final QueryResult result;
+
+        public NewArticles(String query, QueryResult result) {
+            this.query = requireNonNull(query);
+            this.result = requireNonNull(result);
+        }
+
+        @Override
+        public String toString() {
+            return "NewArticles(" + query + ", " + result.getArticles().size() + " articles)";
+        }
+    }
+
+    // Existing classes
     public static class QueryResults {
         final Map<String, QueryResult> queryResults;
 
@@ -22,7 +70,7 @@ public final class QueryResultActor {
         }
     }
 
-    public static final class GetQueryResults {
+    public static final class GetQueryResults implements Message {
         final Set<String> queries;
         final ActorRef<QueryResults> replyTo;
 
@@ -37,11 +85,11 @@ public final class QueryResultActor {
         }
     }
 
-    public static Behavior<GetQueryResults> create() {
+    public static Behavior<Message> create() {
         Map<String, QueryResult> queryResultsMap = new LinkedHashMap<>();
         return Behaviors.logMessages(
                 Behaviors
-                        .receive(GetQueryResults.class)
+                        .receive(Message.class)
                         .onMessage(GetQueryResults.class, getQueryResults -> {
                             Map<String, QueryResult> results = new LinkedHashMap<>();
                             for (String query : getQueryResults.queries) {
@@ -51,6 +99,11 @@ public final class QueryResultActor {
                                 }
                             }
                             getQueryResults.replyTo.tell(new QueryResults(results));
+                            return Behaviors.same();
+                        })
+                        .onMessage(NewArticles.class, newArticles -> {
+                            // Store or update the query result
+                            queryResultsMap.put(newArticles.query, newArticles.result);
                             return Behaviors.same();
                         })
                         .build()

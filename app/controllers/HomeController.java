@@ -53,25 +53,25 @@ public class HomeController extends Controller {
     private static final String SESSION_KEY = "queries";
     private static final int maxArticlesVisible = 50;
 
-    /**
-     * Fetches the cache field
-     *
-     * @return the cache
-     * @author Team
-     */
-    public Map<String, QueryResult> getCache() {
-        return this.cache;
-    }
+//    /**
+//     * Fetches the cache field
+//     *
+//     * @return the cache
+//     * @author Team
+//     */
+//    public Map<String, QueryResult> getCache() {
+//        return this.cache;
+//    }
 
-    /**
-     * modifies the cache
-     *
-     * @return the cache
-     * @author Team
-     */
-    public void setCache(final Map<String, QueryResult> newCache) {
-        this.cache = newCache;
-    }
+//    /**
+//     * modifies the cache
+//     *
+//     * @return the cache
+//     * @author Team
+//     */
+//    public void setCache(final Map<String, QueryResult> newCache) {
+//        this.cache = newCache;
+//    }
 
     /**
      * Fetches the maxArticlesVisible field
@@ -160,6 +160,8 @@ public class HomeController extends Controller {
      */
     public CompletionStage<Result> index(Http.Request request) {
         // show welcome page with no results
+        //All searches is now via WebSocket
+        //All searches is now via WebSocket
         Map<String, QueryResult> empty = new LinkedHashMap<>();
         return CompletableFuture.completedFuture(ok(views.html.index.render("Welcome to NotiLytics! Enter your search terms below.", empty, true, request)));
     }
@@ -238,77 +240,7 @@ public class HomeController extends Controller {
 //    }
 
     public CompletionStage<Result> search(Http.Request request) {
-        String searchInput = request.getQueryString("SearchInput");
-        String sortBy = Optional.ofNullable(request.getQueryString("sortBy")).orElse("publishedAt");
-
-        String showSourcesParam = request.getQueryString("showSources");
-        boolean showSources = showSourcesParam != null && showSourcesParam.equals("true");
-
-        if (searchInput == null || searchInput.trim().isEmpty()) {
-            Map<String, QueryResult> empty = new LinkedHashMap<>();
-            return CompletableFuture.completedFuture(
-                    ok(views.html.index.render("Please enter a search term.", empty, true, request))
-            );
-        }
-
-        Http.Session updatedSession = updateSession(request.session(), searchInput, getMaxArticlesVisible());
-        List<String> queries = getPreviousQueries(updatedSession);
-
-        String encodedQuery = searchInput.trim().replaceAll("\\s+", "+");
-
-        String requestUrl = this.url
-                + "q=" + encodedQuery
-                + "&sortBy=" + sortBy
-                + "&pageSize=" + getMaxArticlesVisible()
-                + "&apiKey=" + this.Key;
-
-        Client client = new Client(this.ws);
-        CompletionStage<List<Article>> response = client.clientRequest(requestUrl);
-
-        return response
-                .thenComposeAsync(articles -> {   // 🔁 use thenComposeAsync, not thenApplyAsync
-                    List<String> descriptions = articles.stream()
-                            .map(a -> a.getTitle() != null ? a.getTitle() : "")
-                            .collect(Collectors.toList());
-
-                    Scheduler scheduler = Adapter.toTyped(system.scheduler());
-                    Duration askTimeout = Duration.ofSeconds(5);
-
-                    return AskPattern.<ReadabilityActor.Command, ReadabilityActor.Result>ask(
-                            readabilityActor,                                   // make sure this is injected
-                            replyTo -> new ReadabilityActor.Calculate(descriptions, replyTo),
-                            askTimeout,
-                            scheduler
-                    ).thenApply(readResult -> {
-                        double avgGrade = readResult.averageGrade;
-                        double avgScore = readResult.averageScore;
-
-                        QueryResult qr = new QueryResult(searchInput, articles, avgGrade, avgScore);
-                        cache.put(searchInput, qr);
-
-                        Map<String, QueryResult> resultsByQuery = new LinkedHashMap<>();
-                        int count = 0;
-                        for (String q : queries) {
-                            if (count >= maxArticlesVisible) break;
-                            QueryResult r = cache.get(q);
-                            if (r != null) {
-                                resultsByQuery.put(q, r);
-                            }
-                            count++;
-                        }
-
-                        return ok(views.html.index.render(
-                                "Search Results for: " + searchInput,
-                                resultsByQuery,
-                                showSources,
-                                request
-                        )).withSession(updatedSession);
-                    });
-                }, executor)
-                .exceptionally(ex -> {          // 🔁 now T is Result, so return Result
-                    System.err.println("Error fetching results: " + ex.getMessage());
-                    return internalServerError("Error fetching results: " + ex.getMessage());
-                });
+        return CompletableFuture.completedFuture(redirect(routes.HomeController.index())); //We have to keep this,, or else I couldn't make it work otherwise (sorry)
     }
 
     /**
@@ -340,14 +272,11 @@ public class HomeController extends Controller {
      */
     public CompletionStage<Result> stats(Http.Request request, String key) {
         return CompletableFuture.supplyAsync(() -> {
-            Statistics s = new Statistics(cache.get(key));
-            int numberOfArticles = cache.get(key).getArticles().size();
-            List<String> titlesAndDescription = new ArrayList<>(s.getTitles());
-            titlesAndDescription.addAll(s.getDescriptions());
-            String counter = Statistics.getString(Statistics.getCounter(
-                    Statistics.filtering(
-                            Statistics.getWords(titlesAndDescription))));
-            return ok(views.html.statProfile.render("Word Statistics for " + key + " (" + numberOfArticles + " articles)", counter));
+            //NOT DONE YET
+            return ok(views.html.statProfile.render(
+                    "Statistics for " + key,
+                    "Statistics feature not done yet while being migrated to WebSocket architecture"
+            ));
         });
     }
 
