@@ -48,7 +48,7 @@ public class HomeController extends Controller {
     private final ActorSystem system;
     private final ActorRef<UserParentActor.Create> userParentActor;
     private final ActorRef<ReadabilityActor.Command> readabilityActor;
-    Map<String, QueryResult> cache = new LinkedHashMap<>();
+//    Map<String, QueryResult> cache = new LinkedHashMap<>();
 
     private static final String SESSION_KEY = "queries";
     private static final int maxArticlesVisible = 50;

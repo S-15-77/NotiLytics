@@ -153,10 +153,21 @@ public class UserActor {
         this.activeQuery = query;
         this.activeSortBy = sortBy;
 
-        // Initialize seen articles set for this query if not exists
-        seenArticles.putIfAbsent(query, new HashSet<>());
+        if (cache.containsKey(query)) {
+            cache.remove(query);
+            seenArticles.remove(query);
+            logger.info("Removed existing query to re-add as most recent: {}", query);
+        }
 
-        // Fetch initial results immediately
+        while (cache.size() >= 10) { //Trying to force remove until we keep 10 latest
+            String oldestKey = cache.keySet().iterator().next();
+            cache.remove(oldestKey);
+            seenArticles.remove(oldestKey);
+            logger.info("Removed oldest query from cache: {} (size was {})", oldestKey, cache.size() + 1);
+        }
+
+        seenArticles.put(query, new HashSet<>());
+
         fetchAndSendResults(query, sortBy, true);
     }
 
