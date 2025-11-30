@@ -109,7 +109,7 @@ $ ->
 
   buildArticlesHtml = (articles) ->
     html = ""
-    for article in articles
+    for article, index in articles
       d = new Date(article.publishedAt)
       yyyy = d.getFullYear()
       mm = String(d.getMonth() + 1).padStart(2, '0')
@@ -117,6 +117,10 @@ $ ->
       hh = String(d.getHours()).padStart(2, '0')
       min = String(d.getMinutes()).padStart(2, '0')
       formatted = "#{yyyy}-#{mm}-#{dd} #{hh}:#{min}"
+
+      # Get individual readability scores from the article object
+      kincaidGrade = if article.kincaidGrade? then article.kincaidGrade.toFixed(2) else "0.00"
+      readingScore = if article.readingScore? then article.readingScore.toFixed(2) else "0.00"
 
       html += """
         <li>
@@ -130,8 +134,8 @@ $ ->
 
       html += """
           Published: #{formatted}<br>
-          Flesch-Kincaid Grade Level: 0.0<br>
-          Flesch Reading Score: 0.0
+          Flesch-Kincaid Grade Level: #{kincaidGrade}<br>
+          Flesch Reading Score: #{readingScore}
         </li>
       """
     html

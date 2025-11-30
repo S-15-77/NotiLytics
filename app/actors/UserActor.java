@@ -240,6 +240,9 @@ public class UserActor {
                 askTimeout,
                 scheduler
         ).thenAccept(readResult -> {
+            // Extract both individual scores and averages from ReadabilityActor result
+            List<Double> individualGrades = readResult.grades;
+            List<Double> individualScores = readResult.scores;
             double avgGrade = readResult.averageGrade;
             double avgScore = readResult.averageScore;
 
@@ -257,8 +260,8 @@ public class UserActor {
             }
             cache.put(query, qr);
 
-            // Send to WebSocket
-            sendArticlesToClient(query, articles, avgGrade, avgScore, messageType);
+            // Send to WebSocket with individual scores
+            sendArticlesToClient(query, articles, individualGrades, individualScores, avgGrade, avgScore, messageType);
         }).exceptionally(ex -> {
             logger.error("Error calculating readability", ex);
             return null;
@@ -266,6 +269,7 @@ public class UserActor {
     }
 
     private void sendArticlesToClient(String query, List<Article> articles,
+                                      List<Double> individualGrades, List<Double> individualScores,
                                       double avgGrade, double avgScore, String messageType) {
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode message = mapper.createObjectNode();
@@ -278,7 +282,8 @@ public class UserActor {
         message.set("readability", readability);
 
         ArrayNode articlesArray = mapper.createArrayNode();
-        for (Article article : articles) {
+        for (int i = 0; i < articles.size(); i++) {
+            Article article = articles.get(i);
             ObjectNode articleNode = mapper.createObjectNode();
             articleNode.put("title", article.getTitle());
             articleNode.put("description", article.getDescription());
@@ -286,6 +291,20 @@ public class UserActor {
             articleNode.put("publishedAt", article.getPublishedAt());
             articleNode.put("sourceName", article.getSourceName());
             articleNode.put("sourceUrl", article.getSourceUrl());
+
+            // Add individual readability scores for this article
+            if (individualGrades != null && i < individualGrades.size()) {
+                articleNode.put("kincaidGrade", individualGrades.get(i));
+            } else {
+                articleNode.put("kincaidGrade", 0.0);
+            }
+
+            if (individualScores != null && i < individualScores.size()) {
+                articleNode.put("readingScore", individualScores.get(i));
+            } else {
+                articleNode.put("readingScore", 0.0);
+            }
+
             articlesArray.add(articleNode);
         }
         message.set("articles", articlesArray);
@@ -293,7 +312,7 @@ public class UserActor {
         Source.<JsonNode>single(message)
                 .runWith(hubSink, mat);
 
-        logger.info("Sent {} articles to client for query: {}", articles.size(), query);
+        logger.info("Sent {} articles to client for query: {} with individual scores", articles.size(), query);
     }
 
     private List<Article> parseArticles(JsonNode articlesJson) {
