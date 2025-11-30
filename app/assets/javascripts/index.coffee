@@ -1,5 +1,4 @@
 $ ->
-  # Wait for everything to be ready
   wsUrl = $("body").data("ws-url")
 
   unless wsUrl
@@ -7,7 +6,6 @@ $ ->
     return
 
   ws = null
-  articlesByQuery = {}
   showSources = $("#showSources").is(":checked")
 
   connectWebSocket = ->
@@ -15,17 +13,20 @@ $ ->
       ws = new WebSocket wsUrl
 
       ws.onopen = ->
-        console.log("WebSocket connected successfully")
+        console.log("WebSocket connected")
 
       ws.onmessage = (event) ->
-        console.log("Received:", event.data)
+        #console.log("MESSAGE RECEIVED:", event.data)
         try
           data = JSON.parse(event.data)
+          #console.log("PARSED DATA:", data)
 
           if data.type == "initial"
             handleInitialResults(data)
           else if data.type == "update"
             handleUpdateResults(data)
+          else if data.type == "history"
+            handleHistoryUpdate(data)
           else if data.type == "sources"
             handleSources(data)
         catch error
@@ -45,58 +46,65 @@ $ ->
     articles = data.articles
     readability = data.readability
 
-    console.log("Initial results for: #{query}, #{articles.length} articles")
-
     $("#results-#{slugify(query)}").remove()
 
-    articlesByQuery[query] = articles
-
-    existingQueries = []
-    $("#results-container > div").each ->
-      id = $(this).attr("id")
-      if id && id.startsWith("results-")
-        existingQueries.push(id)
-
-    while existingQueries.length >= 10
-      oldestId = existingQueries.pop()
-      $("##{oldestId}").remove()
-      console.log("Removed oldest query from display: #{oldestId}")
-
+    #Show message header and hide welcome when new search
     $("#message-header").html("Search Results for: #{escapeHtml(query)}")
     $("#welcome-message").hide()
 
+    #Add new results at the top when new query
     resultsHtml = buildResultsSection(query, articles, readability)
     $("#results-container").prepend(resultsHtml)
+
+    #We keep only the 10 most recent queries as per the instructions
+    existingQueries = $("#results-container > div[id^='results-']")
+    if existingQueries.length > 10
+      existingQueries.slice(10).remove()
 
   handleUpdateResults = (data) ->
     query = data.query
     newArticles = data.articles
 
-    console.log("!!! UPDATE RECEIVED !!!")
-    console.log("Query:", query)
-    console.log("Number of new articles:", newArticles.length)
-    console.log("New articles:", newArticles)
-
-    if articlesByQuery[query]
-      articlesByQuery[query] = articlesByQuery[query].concat(newArticles)
-    else
-      articlesByQuery[query] = newArticles
-
     if newArticles.length > 0
       newArticlesHtml = buildArticlesHtml(newArticles)
       $("#results-#{slugify(query)} ul").prepend(newArticlesHtml)
-      console.log("Added #{newArticles.length} articles to the DOM")
-    else
-      console.log("No new articles to display")
+
+      #We update the count in the header if it exists
+      sectionTitle = $("#results-#{slugify(query)} h4")
+      if sectionTitle.length > 0
+        currentText = sectionTitle.text()
+        queryMatch = currentText.match(/^Search: "([^"]+)"/)
+        if queryMatch
+          currentCount = $("#results-#{slugify(query)} ul li").length
+          sectionTitle.text("Search: \"#{queryMatch[1]}\" (#{currentCount} latest results)")
+
+  handleHistoryUpdate = (data) ->
+    queries = data.queries
+    return unless queries && queries.length > 0
+
+    $("#results-container").empty()
+
+    for queryData in queries
+      query = queryData.query
+      articles = queryData.articles
+      readability = queryData.readability
+
+      resultsHtml = buildResultsSection(query, articles, readability)
+      $("#results-container").append(resultsHtml)
+
+    if queries.length > 0
+      $("#welcome-message").hide()
+      $("#message-header").show()
 
   handleSources = (data) ->
-    console.log("Received sources:", data.data)
+    # Handle sources data if needed
 
   buildResultsSection = (query, articles, readability) ->
     articlesHtml = buildArticlesHtml(articles)
+    articleCount = articles.length
     """
     <div id="results-#{slugify(query)}">
-      <h4>Search: "#{escapeHtml(query)}" (10 latest results)</h4>
+      <h4>Search: "#{escapeHtml(query)}" (#{articleCount} latest results)</h4>
       <button onclick="window.open('/statistics/#{encodeURIComponent(query)}', '_blank')">Statistics</button>
       <p><strong>Average Flesch-Kincaid Grade Level:</strong> #{readability.avgGrade.toFixed(2)}</p>
       <p><strong>Average Flesch Reading Score:</strong> #{readability.avgScore.toFixed(2)}</p>
@@ -109,7 +117,7 @@ $ ->
 
   buildArticlesHtml = (articles) ->
     html = ""
-    for article, index in articles
+    for article in articles
       d = new Date(article.publishedAt)
       yyyy = d.getFullYear()
       mm = String(d.getMonth() + 1).padStart(2, '0')
@@ -118,7 +126,6 @@ $ ->
       min = String(d.getMinutes()).padStart(2, '0')
       formatted = "#{yyyy}-#{mm}-#{dd} #{hh}:#{min}"
 
-      # Get individual readability scores from the article object
       kincaidGrade = if article.kincaidGrade? then article.kincaidGrade.toFixed(2) else "0.00"
       readingScore = if article.readingScore? then article.readingScore.toFixed(2) else "0.00"
 
@@ -147,13 +154,12 @@ $ ->
     return '' unless text
     $('<div>').text(text).html()
 
-  # Initialize WebSocket connection first
+  # Initialize WebSocket connection
   connectWebSocket()
 
-  # Wait a moment for DOM to be fully ready, then attach form handler
+  # Attach form handler
   setTimeout ->
     formElement = $("#search-form")
-    console.log("Attaching form handler, form found:", formElement.length > 0)
 
     formElement.on "submit", (e) ->
       e.preventDefault()
@@ -165,17 +171,17 @@ $ ->
 
       if query
         if ws && ws.readyState == WebSocket.OPEN
-          console.log("Sending search via WebSocket")
           message = JSON.stringify({type: "search", query: query, sortBy: sortBy})
-          console.log("Message:", message)
           ws.send(message)
         else
-          console.error("WebSocket not ready, state:", ws?.readyState)
           alert("WebSocket connection not ready. Please wait and try again.")
-      else
-        console.log("Empty query, not sending")
 
     $("#showSources").on "change", ->
       showSources = $(this).is(":checked")
-      console.log("showSources changed to:", showSources)
+      $("li").each ->
+        sourceInfo = $(this).find("a[href]:eq(1)").parent()
+        if showSources
+          sourceInfo.show()
+        else
+          sourceInfo.hide()
   , 100
