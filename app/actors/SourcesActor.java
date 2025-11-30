@@ -38,6 +38,10 @@ public final class SourcesActor {
         }
     }
 
+    /**
+     * Creates a new SourcesActor behavior.
+     * @return The actor behavior
+     */
     public static Behavior<GetSources> create() {
         Map<String, Source> sourcesMap = new HashMap<>();
         return Behaviors.logMessages(

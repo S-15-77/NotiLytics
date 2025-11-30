@@ -14,10 +14,11 @@ import static java.util.Objects.requireNonNull;
 public final class QueryResultActor {
     private QueryResultActor() {}
 
-    // Base interface for all messages
     public interface Message {}
 
-    // Message classes for WebSocket communication
+    /**
+     * Message to request a search for articles.
+     */
     public static final class SearchRequest implements Message {
         public final String query;
         public final String sortBy;
@@ -33,6 +34,9 @@ public final class QueryResultActor {
         }
     }
 
+    /**
+     * Message to stop tracking a specific search query.
+     */
     public static final class StopSearch implements Message {
         public final String query;
 
@@ -46,6 +50,9 @@ public final class QueryResultActor {
         }
     }
 
+    /**
+     * Message containing new articles for a query.
+     */
     public static final class NewArticles implements Message {
         public final String query;
         public final QueryResult result;
@@ -61,7 +68,9 @@ public final class QueryResultActor {
         }
     }
 
-    // Existing classes
+    /**
+     * Response message containing query results.
+     */
     public static class QueryResults {
         final Map<String, QueryResult> queryResults;
 
@@ -70,6 +79,9 @@ public final class QueryResultActor {
         }
     }
 
+    /**
+     * Message to retrieve cached query results for specified queries.
+     */
     public static final class GetQueryResults implements Message {
         final Set<String> queries;
         final ActorRef<QueryResults> replyTo;
@@ -85,6 +97,11 @@ public final class QueryResultActor {
         }
     }
 
+    /**
+     * Creates a new QueryResultActor behavior.
+     *
+     * @return The actor behavior
+     */
     public static Behavior<Message> create() {
         Map<String, QueryResult> queryResultsMap = new LinkedHashMap<>();
         return Behaviors.logMessages(

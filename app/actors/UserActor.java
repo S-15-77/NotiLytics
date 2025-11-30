@@ -36,6 +36,9 @@ import org.apache.pekko.actor.typed.javadsl.AskPattern;
 public class UserActor {
     public interface Message {}
 
+    /**
+     * Internal message to stop the actor.
+     */
     private static final class InternalStop implements Message {
         private static final InternalStop INSTANCE = new InternalStop();
         public static InternalStop get() {
@@ -44,6 +47,9 @@ public class UserActor {
         private InternalStop() {}
     }
 
+    /**
+     * Internal message to trigger periodic polling of queries in case a new article is found
+     */
     private static final class PollTick implements Message {
         private static final PollTick INSTANCE = new PollTick();
         public static PollTick get() {
@@ -71,6 +77,15 @@ public class UserActor {
     private final Map<String, QueryResult> cache = new LinkedHashMap<>();
     private final Map<String, Set<String>> seenArticles = new HashMap<>();
 
+    /**
+     * Creates a new UserActor behavior.
+     * @param id The unique identifier for the user
+     * @param sourcesActor Reference to the sources actor
+     * @param readabilityActor Reference to the readability actor
+     * @param ws WebSocket client for API requests
+     * @param config Application configuration
+     * @return The actor behavior
+     */
     public static Behavior<Message> create(String id, ActorRef<GetSources> sourcesActor,
                                            ActorRef<ReadabilityActor.Command> readabilityActor,
                                            WSClient ws, Config config) {
@@ -116,6 +131,10 @@ public class UserActor {
         this.websocketFlow = Flow.fromSinkAndSourceCoupled(jsonSink, hubSource);
     }
 
+    /**
+     * Handles incoming WebSocket messages from the client.
+     * @param json The incoming JSON message
+     */
     private void handleIncomingMessage(JsonNode json) {
         String type = json.has("type") ? json.get("type").asText() : "";
 
@@ -129,6 +148,10 @@ public class UserActor {
         }
     }
 
+    /**
+     * Handles a search request and fetches articles.
+     * @param json The search request JSON
+     */
     private void handleSearch(JsonNode json) {
         String query = json.has("query") ? json.get("query").asText() : "";
         String sortBy = json.has("sortBy") ? json.get("sortBy").asText() : "publishedAt";
@@ -158,6 +181,12 @@ public class UserActor {
         fetchAndSendResults(query, sortBy, true);
     }
 
+    /**
+     * Fetches articles from the NewsAPI API and sends results to the client.
+     * @param query The search query
+     * @param sortBy The sort order for results
+     * @param isInitial Whether this is an initial search or an update
+     */
     private void fetchAndSendResults(String query, String sortBy, boolean isInitial) {
         String encodedQuery = query.trim().replaceAll("\\s+", "+");
         String requestUrl = this.url + "q=" + encodedQuery + "&sortBy=" + sortBy +
@@ -213,6 +242,12 @@ public class UserActor {
                 });
     }
 
+    /**
+     * Calculates readability scores for articles and sends them to the client.
+     * @param query The search query
+     * @param articles The list of articles
+     * @param messageType The type of message to send
+     */
     private void calculateReadabilityAndSend(String query, List<Article> articles, String messageType) {
         List<String> descriptions = articles.stream()
                 .map(a -> a.getTitle() != null ? a.getTitle() : "")
@@ -265,6 +300,16 @@ public class UserActor {
         });
     }
 
+    /**
+     * Sends article data to the WebSocket client.
+     * @param query The search query
+     * @param articles The list of articles
+     * @param individualGrades Individual readability grades
+     * @param individualScores Individual readability scores
+     * @param avgGrade Average readability grade
+     * @param avgScore Average readability score
+     * @param messageType The type of message to send
+     */
     private void sendArticlesToClient(String query, List<Article> articles,
                                       List<Double> individualGrades, List<Double> individualScores,
                                       double avgGrade, double avgScore, String messageType) {
@@ -309,6 +354,9 @@ public class UserActor {
                 .runWith(hubSink, mat);
     }
 
+    /**
+     * Polls all cached queries for new articles.
+     */
     private void pollAllQueriesAndSendHistory() {
         logger.info("Polling all queries for new articles");
 
@@ -330,6 +378,9 @@ public class UserActor {
         );
     }
 
+    /**
+     * Sends the full query history to the client.
+     */
     private void sendFullHistoryToClient() {
         if (cache.isEmpty()) {
             return;
@@ -379,6 +430,11 @@ public class UserActor {
                 .runWith(hubSink, mat);
     }
 
+    /**
+     * Parses article JSON data into Article objects.
+     * @param articlesJson The JSON array of articles
+     * @return List of parsed articles
+     */
     private List<Article> parseArticles(JsonNode articlesJson) {
         List<Article> articles = new ArrayList<>();
         if (articlesJson.isArray()) {
@@ -401,10 +457,19 @@ public class UserActor {
         return articles;
     }
 
+    /**
+     * Generates a unique key for an article.
+     * @param article The article
+     * @return A unique key string
+     */
     private String getArticleKey(Article article) {
         return article.getUrl() + "|" + article.getTitle();
     }
 
+    /**
+     * Handles source filtering requests.
+     * @param json The filter request JSON
+     */
     private void handleSourceFilter(JsonNode json) {
         String country = json.has("country") ? json.get("country").asText() : "";
         String category = json.has("category") ? json.get("category").asText() : "";
@@ -440,6 +505,10 @@ public class UserActor {
                 });
     }
 
+    /**
+     * Returns the actor behavior.
+     * @return The actor behavior
+     */
     public Behavior<Message> behavior() {
         return Behaviors
                 .receive(Message.class)
@@ -461,6 +530,10 @@ public class UserActor {
                 .build();
     }
 
+    /**
+     * Returns the WebSocket flow for this user.
+     * @return The WebSocket flow
+     */
     public Flow<JsonNode, JsonNode, NotUsed> getWebsocketFlow() {
         return websocketFlow;
     }
