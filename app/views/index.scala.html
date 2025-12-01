@@ -1,176 +1,176 @@
 @(message: String, resultsByQuery: java.util.Map[String, models.QueryResult], showSources: Boolean)(implicit request: play.mvc.Http.Request)
 
-@import models.ReadabilityCalculator
+    @import models.ReadabilityCalculator
 
-@main("NotiLytics") {
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script type='text/javascript' src='@routes.Assets.versioned("javascripts/index.js")'></script>
+    @main("NotiLytics") {
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script type='text/javascript' src='@routes.Assets.versioned("javascripts/index.js")'></script>
 
-    <body data-ws-url="@routes.HomeController.ws.webSocketURL(request)">
-        <div>
-            <h2>NotiLytics</h2>
+        <body data-ws-url="@routes.HomeController.ws.webSocketURL(request)">
+            <div>
+                <h2>NotiLytics</h2>
 
-            <form action="@routes.HomeController.search()" method="get" style="padding:10px; border:1px solid #ddd; max-width:600px;">
-                <label for="searchInput">Search:</label>
-                <input type="text" id="searchInput" name="SearchInput" placeholder="Enter search terms" required>
-                <button type="submit">Search</button>
-
-                <div>
-                    <input type="radio" id="date" name="sortBy" value="publishedAt" checked>
-                    <label for="date">Published Date</label>
-
-                    <input type="radio" id="relevancy" name="sortBy" value="relevancy">
-                    <label for="relevancy">Relevancy</label>
-
-                    <input type="radio" id="popularity" name="sortBy" value="popularity">
-                    <label for="popularity">Popularity</label>
-                </div>
-
-                <div style="margin-top: 10px;">
-                    <input type="checkbox" id="showSources" name="showSources" value="true" @if(showSources){checked=""}>
-                    <label for="showSources">Show sources</label>
-                </div>
-            </form>
-
-            <div style="margin-top: 20px; padding: 10px; border: 1px solid #ddd; max-width: 800px;">
-                <h3>View News Sources</h3>
-                <form action="@routes.HomeController.sources()" method="get" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <form id="search-form" action="@routes.HomeController.search()" method="get" style="padding:10px; border:1px solid #ddd; max-width:600px;">
+                    <label for="searchInput">Search:</label>
+                    <input type="text" id="searchInput" name="SearchInput" placeholder="Enter search terms" required>
+                    <button type="submit">Search</button>
 
                     <div>
-                        <label for="countryFilter">Country:</label>
-                        <select id="countryFilter" name="country">
-                            <option value="">All</option>
-                            <option value="ae">UAE</option>
-                            <option value="ar">Argentina</option>
-                            <option value="at">Austria</option>
-                            <option value="au">Australia</option>
-                            <option value="be">Belgium</option>
-                            <option value="bg">Bulgaria</option>
-                            <option value="br">Brazil</option>
-                            <option value="ca">Canada</option>
-                            <option value="ch">Switzerland</option>
-                            <option value="cn">China</option>
-                            <option value="co">Colombia</option>
-                            <option value="cu">Cuba</option>
-                            <option value="cz">Czech Republic</option>
-                            <option value="de">Germany</option>
-                            <option value="eg">Egypt</option>
-                            <option value="fr">France</option>
-                            <option value="gb">United Kingdom</option>
-                            <option value="gr">Greece</option>
-                            <option value="hk">Hong Kong</option>
-                            <option value="hu">Hungary</option>
-                            <option value="id">Indonesia</option>
-                            <option value="ie">Ireland</option>
-                            <option value="il">Israel</option>
-                            <option value="in">India</option>
-                            <option value="it">Italy</option>
-                            <option value="jp">Japan</option>
-                            <option value="kr">South Korea</option>
-                            <option value="lt">Lithuania</option>
-                            <option value="lv">Latvia</option>
-                            <option value="ma">Morocco</option>
-                            <option value="mx">Mexico</option>
-                            <option value="my">Malaysia</option>
-                            <option value="ng">Nigeria</option>
-                            <option value="nl">Netherlands</option>
-                            <option value="no">Norway</option>
-                            <option value="nz">New Zealand</option>
-                            <option value="ph">Philippines</option>
-                            <option value="pl">Poland</option>
-                            <option value="pt">Portugal</option>
-                            <option value="ro">Romania</option>
-                            <option value="rs">Serbia</option>
-                            <option value="ru">Russia</option>
-                            <option value="sa">Saudi Arabia</option>
-                            <option value="se">Sweden</option>
-                            <option value="sg">Singapore</option>
-                            <option value="si">Slovenia</option>
-                            <option value="sk">Slovakia</option>
-                            <option value="th">Thailand</option>
-                            <option value="tr">Turkey</option>
-                            <option value="tw">Taiwan</option>
-                            <option value="ua">Ukraine</option>
-                            <option value="us">United States</option>
-                            <option value="ve">Venezuela</option>
-                            <option value="za">South Africa</option>
-                        </select>
+                        <input type="radio" id="date" name="sortBy" value="publishedAt" checked>
+                        <label for="date">Published Date</label>
+
+                        <input type="radio" id="relevancy" name="sortBy" value="relevancy">
+                        <label for="relevancy">Relevancy</label>
+
+                        <input type="radio" id="popularity" name="sortBy" value="popularity">
+                        <label for="popularity">Popularity</label>
                     </div>
 
-                    <div>
-                        <label for="categoryFilter">Category:</label>
-                        <select id="categoryFilter" name="category">
-                            <option value="">All</option>
-                            <option value="business">Business</option>
-                            <option value="entertainment">Entertainment</option>
-                            <option value="general">General</option>
-                            <option value="health">Health</option>
-                            <option value="science">Science</option>
-                            <option value="sports">Sports</option>
-                            <option value="technology">Technology</option>
-                        </select>
+                    <div style="margin-top: 10px;">
+                        <input type="checkbox" id="showSources" name="showSources" value="true" @if(showSources){checked=""}>
+                        <label for="showSources">Show sources</label>
                     </div>
-
-                    <div>
-                        <label for="languageFilter">Language:</label>
-                        <select id="languageFilter" name="language">
-                            <option value="">All</option>
-                            <option value="ar">Arabic</option>
-                            <option value="de">German</option>
-                            <option value="en">English</option>
-                            <option value="es">Spanish</option>
-                            <option value="fr">French</option>
-                            <option value="he">Hebrew</option>
-                            <option value="it">Italian</option>
-                            <option value="nl">Dutch</option>
-                            <option value="no">Norwegian</option>
-                            <option value="pt">Portuguese</option>
-                            <option value="ru">Russian</option>
-                            <option value="sv">Swedish</option>
-                            <option value="ud">Urdu</option>
-                            <option value="zh">Chinese</option>
-                        </select>
-                    </div>
-
-                    <button type="submit">View Sources</button>
                 </form>
-            </div>
 
-            <h3>@Html(message)</h3>
+                <div style="margin-top: 20px; padding: 10px; border: 1px solid #ddd; max-width: 800px;">
+                    <h3>View News Sources</h3>
+                    <form action="@routes.HomeController.sources()" method="get" target="_blank" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <div>
+                            <label for="countryFilter">Country:</label>
+                            <select id="countryFilter" name="country">
+                                <option value="">All</option>
+                                <option value="ae">UAE</option>
+                                <option value="ar">Argentina</option>
+                                <option value="at">Austria</option>
+                                <option value="au">Australia</option>
+                                <option value="be">Belgium</option>
+                                <option value="bg">Bulgaria</option>
+                                <option value="br">Brazil</option>
+                                <option value="ca">Canada</option>
+                                <option value="ch">Switzerland</option>
+                                <option value="cn">China</option>
+                                <option value="co">Colombia</option>
+                                <option value="cu">Cuba</option>
+                                <option value="cz">Czech Republic</option>
+                                <option value="de">Germany</option>
+                                <option value="eg">Egypt</option>
+                                <option value="fr">France</option>
+                                <option value="gb">United Kingdom</option>
+                                <option value="gr">Greece</option>
+                                <option value="hk">Hong Kong</option>
+                                <option value="hu">Hungary</option>
+                                <option value="id">Indonesia</option>
+                                <option value="ie">Ireland</option>
+                                <option value="il">Israel</option>
+                                <option value="in">India</option>
+                                <option value="it">Italy</option>
+                                <option value="jp">Japan</option>
+                                <option value="kr">South Korea</option>
+                                <option value="lt">Lithuania</option>
+                                <option value="lv">Latvia</option>
+                                <option value="ma">Morocco</option>
+                                <option value="mx">Mexico</option>
+                                <option value="my">Malaysia</option>
+                                <option value="ng">Nigeria</option>
+                                <option value="nl">Netherlands</option>
+                                <option value="no">Norway</option>
+                                <option value="nz">New Zealand</option>
+                                <option value="ph">Philippines</option>
+                                <option value="pl">Poland</option>
+                                <option value="pt">Portugal</option>
+                                <option value="ro">Romania</option>
+                                <option value="rs">Serbia</option>
+                                <option value="ru">Russia</option>
+                                <option value="sa">Saudi Arabia</option>
+                                <option value="se">Sweden</option>
+                                <option value="sg">Singapore</option>
+                                <option value="si">Slovenia</option>
+                                <option value="sk">Slovakia</option>
+                                <option value="th">Thailand</option>
+                                <option value="tr">Turkey</option>
+                                <option value="tw">Taiwan</option>
+                                <option value="ua">Ukraine</option>
+                                <option value="us">United States</option>
+                                <option value="ve">Venezuela</option>
+                                <option value="za">South Africa</option>
+                            </select>
+                        </div>
 
-            @if(resultsByQuery != null && !resultsByQuery.isEmpty()) {
-                @for((query, result) <- collection.JavaConverters.mapAsScalaMap(resultsByQuery).toSeq) {
-                    <div>
-                        <h4>Search: "@query" (10 latest results)</h4>
-                        <button onclick="window.location.href='/statistics/@query'">Statistics</button>
-                        <p><strong>Average Flesch-Kincaid Grade Level:</strong> @result.getAvgGrade().formatted("%.2f")</p>
-                        <p><strong>Average Flesch Reading Score:</strong> @result.getAvgScore().formatted("%.2f")</p>
+                        <div>
+                            <label for="categoryFilter">Category:</label>
+                            <select id="categoryFilter" name="category">
+                                <option value="">All</option>
+                                <option value="business">Business</option>
+                                <option value="entertainment">Entertainment</option>
+                                <option value="general">General</option>
+                                <option value="health">Health</option>
+                                <option value="science">Science</option>
+                                <option value="sports">Sports</option>
+                                <option value="technology">Technology</option>
+                            </select>
+                        </div>
 
-                        @if(result.getArticles() != null && !result.getArticles().isEmpty()) {
-                            <ul>
-                            @for((article, index) <- collection.JavaConverters.asScalaBuffer(result.getArticles()).zipWithIndex if index < 10) {
-                                <li>
-                                    <strong><a href="@article.getUrl()" target="_blank">@article.getTitle()</a></strong><br>
-                                    @if(showSources) {
-                                        Source: <a href="@article.getSourceUrl()" target="_blank">@article.getSourceName()</a><br>
-                                    }
-                                    Published: @article.getPublishedAt()<br>
-                                    Flesch-Kincaid Grade Level: @{ReadabilityCalculator.calculateFleschKincaidGrade(article.getTitle()).formatted("%.2f")}<br>
-                                    Flesch Reading Score: @{ReadabilityCalculator.calculateFleschReadingScore(article.getTitle()).formatted("%.2f")}
-                                </li>
+                        <div>
+                            <label for="languageFilter">Language:</label>
+                            <select id="languageFilter" name="language">
+                                <option value="">All</option>
+                                <option value="ar">Arabic</option>
+                                <option value="de">German</option>
+                                <option value="en">English</option>
+                                <option value="es">Spanish</option>
+                                <option value="fr">French</option>
+                                <option value="he">Hebrew</option>
+                                <option value="it">Italian</option>
+                                <option value="nl">Dutch</option>
+                                <option value="no">Norwegian</option>
+                                <option value="pt">Portuguese</option>
+                                <option value="ru">Russian</option>
+                                <option value="sv">Swedish</option>
+                                <option value="ud">Urdu</option>
+                                <option value="zh">Chinese</option>
+                            </select>
+                        </div>
+
+                        <button type="submit">View Sources</button>
+                    </form>
+                </div>
+
+                <h3 id="message-header">@Html(message)</h3>
+
+                <div id="results-container"></div>
+
+                @if(resultsByQuery != null && !resultsByQuery.isEmpty()) {
+                    @for((query, result) <- collection.JavaConverters.mapAsScalaMap(resultsByQuery).toSeq) {
+                        <div>
+                            <h4>Search: "@query" (10 latest results)</h4>
+                            <button onclick="window.open('/statistics/@query', '_blank')">Statistics</button>                            <p><strong>Average Flesch-Kincaid Grade Level:</strong> @result.getAvgGrade().formatted("%.2f")</p>
+                            <p><strong>Average Flesch Reading Score:</strong> @result.getAvgScore().formatted("%.2f")</p>
+
+                            @if(result.getArticles() != null && !result.getArticles().isEmpty()) {
+                                <ul>
+                                @for((article, index) <- collection.JavaConverters.asScalaBuffer(result.getArticles()).zipWithIndex if index < 10) {
+                                    <li>
+                                        <strong><a href="@article.getUrl()" target="_blank">@article.getTitle()</a></strong><br>
+                                        @if(showSources) {
+                                            Source: <a href="@article.getSourceUrl()" target="_blank">@article.getSourceName()</a><br>
+                                        }
+                                        Published: @article.getPublishedAt()<br>
+                                        Flesch-Kincaid Grade Level: @{ReadabilityCalculator.calculateFleschKincaidGrade(article.getTitle()).formatted("%.2f")}<br>
+                                        Flesch Reading Score: @{ReadabilityCalculator.calculateFleschReadingScore(article.getTitle()).formatted("%.2f")}
+                                    </li>
+                                }
+                                </ul>
+                            } else {
+                                <p>No results found for this search query.</p>
                             }
-                            </ul>
-                        } else {
-                            <p>No results found for this search query.</p>
-                        }
-                        <hr>
+                            <hr>
+                        </div>
+                    }
+                } else {
+                    <div id="welcome-message">
+                        <p>Enter a search term above to find the latest news articles!</p>
                     </div>
                 }
-            } else {
-                <div>
-                    <p>Enter a search term above to find the latest news articles!</p>
-                </div>
-            }
-        </div>
-    </body>
-}
+            </div>
+        </body>
+    }
