@@ -64,7 +64,7 @@ public class StatisticsTest {
     /**
      * Verifies {@link Statistics#getWords(java.util.List)} lowercases and splits
      * input sentences into individual tokens.
-     * @author Karim BG
+     * @autho r Karim BG
      */
     @Test
     public void testGetWords() {

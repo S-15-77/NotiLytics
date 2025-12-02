@@ -52,7 +52,7 @@ public class UserActor {
     /**
      * Internal message to trigger periodic polling of queries in case a new article is found
      */
-    private static final class PollTick implements Message {
+    public static final class PollTick implements Message {
         private static final PollTick INSTANCE = new PollTick();
         public static PollTick get() {
             return INSTANCE;
@@ -553,4 +553,6 @@ public class UserActor {
     public interface Factory {
         Behavior<Message> create(String id);
     }
+
+
 }

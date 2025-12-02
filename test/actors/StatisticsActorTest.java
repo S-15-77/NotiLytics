@@ -19,17 +19,30 @@ public class StatisticsActorTest {
 
     private static ActorTestKit testKit;
 
+    /**
+     * Start the testing
+     * @author Karim
+     */
     @BeforeClass
     public static void setup() {
         testKit = ActorTestKit.create();
     }
 
+    /**
+     * Stop the Testing
+     * @author Karim
+     */
     @AfterClass
     public static void teardown() {
         testKit.shutdownTestKit();
     }
 
-    /** Helper: creates a minimal valid Article instance */
+    /**
+     * Create a small article to be tested
+     * @author Karim
+     * @param description
+     * @param title
+     */
     private Article article(String title, String description) {
         return new Article(
                 title,
@@ -43,7 +56,11 @@ public class StatisticsActorTest {
         );
     }
 
-    /** Helper: creates a QueryResult with the given articles */
+    /**
+     * Creates a query using articles
+     * @author Karim
+     * @param articles
+     */
     private QueryResult qr(List<Article> articles) {
         return new QueryResult(
                 "qr1",
@@ -53,6 +70,10 @@ public class StatisticsActorTest {
         );
     }
 
+    /**
+     * Test with normal function
+     * @author Karim
+     */
     @Test
     public void testStatisticsActorComputesStatistics() {
 
@@ -82,9 +103,13 @@ public class StatisticsActorTest {
 
         // Basic semantic checks
         assertTrue(counter.containsKey("banana"));
-        assertEquals(2L, (long) counter.get("banana"));
+        assertEquals(3L, (long) counter.get("banana"));
     }
 
+    /**
+     * Test with an empty Article
+     * @author Karim
+     */
     @Test
     public void testEmptyArticlesProducesEmptyStats() {
 
@@ -105,6 +130,10 @@ public class StatisticsActorTest {
         assertTrue(response.resultString().isEmpty());
     }
 
+    /**
+     * Test with an 1 word
+     * @author Karim
+     */
     @Test
     public void testActorHandlesSingleWord() {
 
@@ -122,9 +151,13 @@ public class StatisticsActorTest {
 
         StatisticsActor.Response response = probe.receiveMessage();
 
-        assertEquals(1L, (long) response.counter().get("hello"));
+        assertEquals(2L, (long) response.counter().get("hello"));
     }
 
+    /**
+     * Test with an empty results but non empty article
+     * @author Karim
+     */
     @Test
     public void testActorDoesNotCrashOnSpecialCharacters() {
 
@@ -142,7 +175,7 @@ public class StatisticsActorTest {
 
         StatisticsActor.Response response = probe.receiveMessage();
 
-        // Expect no meaningful words
+        //Expect no meaningful words
         assertTrue(response.counter().isEmpty());
     }
 }

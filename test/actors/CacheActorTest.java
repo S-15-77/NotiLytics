@@ -17,17 +17,29 @@ public class CacheActorTest {
 
     private static ActorTestKit testKit;
 
+    /**
+     * Start test
+     * @author Karim
+     */
     @BeforeClass
     public static void setup() {
         testKit = ActorTestKit.create();
     }
 
+    /**
+     * Stop test
+     * @author Karim
+     */
     @AfterClass
     public static void teardown() {
         testKit.shutdownTestKit();
     }
 
-    /** Creates a minimal valid Article instance. */
+    /**
+     * Create a small article to be tested
+     * @author Karim
+     * @param id
+     */
     private Article sampleArticle(String id) {
         return new Article(
                 "Title " + id,
@@ -41,7 +53,11 @@ public class CacheActorTest {
         );
     }
 
-    /** Creates a valid QueryResult instance */
+    /**
+     * Creates a query using articles
+     * @author Karim
+     * @param id
+     */
     private QueryResult sampleQuery(String id) {
         return new QueryResult(
                 id,
@@ -51,6 +67,10 @@ public class CacheActorTest {
         );
     }
 
+    /**
+     * tests put to put in cache and get to get from the cache
+     * @author Karim
+     */
     @Test
     public void testPutAndGet() {
         ActorRef<CacheActor.Command> cache =
@@ -67,6 +87,10 @@ public class CacheActorTest {
         assertEquals(qr, probe.receiveMessage().result());
     }
 
+    /**
+     * Test with a key being not correct
+     * @author Karim
+     */
     @Test
     public void testMissingKeyReturnsNull() {
         ActorRef<CacheActor.Command> cache =
@@ -80,6 +104,10 @@ public class CacheActorTest {
         assertNull(probe.receiveMessage().result());
     }
 
+    /**
+     * test with several queries and keys
+     * @author Karim
+     */
     @Test
     public void testMultipleEntries() {
         ActorRef<CacheActor.Command> cache =
@@ -103,6 +131,10 @@ public class CacheActorTest {
         assertEquals(q2, p2.receiveMessage().result());
     }
 
+    /**
+     * Testing to overwrite something previously stored
+     * @author Karim
+     */
     @Test
     public void testOverwrite() {
         ActorRef<CacheActor.Command> cache =
