@@ -46,11 +46,14 @@ public class UserParentActorTest {
                 testKit.spawn(SourcesActor.create());
         ActorRef<ReadabilityActor.Command> readabilityActor =
                 testKit.spawn(ReadabilityActor.create());
+        ActorRef<CacheActor.Command> mockCacheActor =
+                testKit.spawn(CacheActor.create());
 
         UserActor.Factory factory = id -> UserActor.create(
                 id,
                 sourcesActor,
                 readabilityActor,
+                mockCacheActor,
                 mockWsClient,
                 testConfig
         );
@@ -68,6 +71,8 @@ public class UserParentActorTest {
     @Test
     public void testCreate_multipleUsers() {
         WSClient mockWsClient = mock(WSClient.class);
+        ActorRef<CacheActor.Command> mockCacheActor =
+                testKit.spawn(CacheActor.create());
         ActorRef<SourcesActor.GetSources> sourcesActor =
                 testKit.spawn(SourcesActor.create());
         ActorRef<ReadabilityActor.Command> readabilityActor =
@@ -77,6 +82,7 @@ public class UserParentActorTest {
                 id,
                 sourcesActor,
                 readabilityActor,
+                mockCacheActor,
                 mockWsClient,
                 testConfig
         );
@@ -104,11 +110,14 @@ public class UserParentActorTest {
                 testKit.spawn(SourcesActor.create());
         ActorRef<ReadabilityActor.Command> readabilityActor =
                 testKit.spawn(ReadabilityActor.create());
+        ActorRef<CacheActor.Command> mockCacheActor =
+                testKit.spawn(CacheActor.create());
 
         UserActor.Factory factory = id -> UserActor.create(
                 id,
                 sourcesActor,
                 readabilityActor,
+                mockCacheActor,
                 mockWsClient,
                 testConfig
         );
@@ -135,11 +144,14 @@ public class UserParentActorTest {
                 testKit.spawn(SourcesActor.create());
         ActorRef<ReadabilityActor.Command> readabilityActor =
                 testKit.spawn(ReadabilityActor.create());
+        ActorRef<CacheActor.Command> mockCacheActor =
+                testKit.spawn(CacheActor.create());
 
         UserActor.Factory factory = id -> UserActor.create(
                 id,
                 sourcesActor,
                 readabilityActor,
+                mockCacheActor,
                 mockWsClient,
                 testConfig
         );
@@ -161,11 +173,14 @@ public class UserParentActorTest {
                 testKit.spawn(SourcesActor.create());
         ActorRef<ReadabilityActor.Command> readabilityActor =
                 testKit.spawn(ReadabilityActor.create());
+        ActorRef<CacheActor.Command> mockCacheActor =
+                testKit.spawn(CacheActor.create());
 
         UserActor.Factory factory = id -> UserActor.create(
                 id,
                 sourcesActor,
                 readabilityActor,
+                mockCacheActor,
                 mockWsClient,
                 testConfig
         );
@@ -206,11 +221,14 @@ public class UserParentActorTest {
         WSClient mockWsClient = mock(WSClient.class);
         ActorRef<SourcesActor.GetSources> sourcesActor = testKit.spawn(SourcesActor.create());
         ActorRef<ReadabilityActor.Command> readabilityActor = testKit.spawn(ReadabilityActor.create());
+        ActorRef<CacheActor.Command> mockCacheActor =
+                testKit.spawn(CacheActor.create());
 
         UserActor.Factory factory = id -> UserActor.create(
                 id,
                 sourcesActor,
                 readabilityActor,
+                mockCacheActor,
                 mockWsClient,
                 testConfig
         );
@@ -233,11 +251,14 @@ public class UserParentActorTest {
                 testKit.spawn(SourcesActor.create());
         ActorRef<ReadabilityActor.Command> readabilityActor =
                 testKit.spawn(ReadabilityActor.create());
+        ActorRef<CacheActor.Command> mockCacheActor =
+                testKit.spawn(CacheActor.create());
 
         UserActor.Factory factory = id -> UserActor.create(
                 id,
                 sourcesActor,
                 readabilityActor,
+                mockCacheActor,
                 mockWsClient,
                 testConfig
         );

@@ -1,6 +1,8 @@
 package controllers;
 
 import Services.Client;
+import actors.CacheActor;
+import actors.StatisticsActor;
 import actors.UserParentActor;
 import actors.ReadabilityActor;
 import models.Article;
@@ -51,7 +53,8 @@ public class HomeControllerTest {
     private ActorSystem system;
     private ActorRef<UserParentActor.Create> userParentActor;
     private ActorRef<ReadabilityActor.Command> readabilityActor;
-
+    private ActorRef<StatisticsActor.Command> StatisticsActor;
+    private ActorRef<CacheActor.Command> CacheActor;
     /**
      * Sets up a minimal controller with mocked dependencies (WS client, config, executor).
      * Stubs NewsAPI config values and ensures WSClient.get() returns a completed future.
@@ -67,6 +70,8 @@ public class HomeControllerTest {
         system = Mockito.mock(ActorSystem.class);
         userParentActor = Mockito.mock(ActorRef.class);
         readabilityActor = Mockito.mock(ActorRef.class);
+        StatisticsActor = Mockito.mock(ActorRef.class);
+        CacheActor = Mockito.mock(ActorRef.class);
         executor = Executors.newSingleThreadExecutor();
 
         // --- Stub config values ---
@@ -88,7 +93,7 @@ public class HomeControllerTest {
         when(mockRequest.get()).thenReturn(fakeFuture);
 
         // --- Instantiate controller ---
-        controller = new HomeController(mockWs, executor, mockConfig, system, userParentActor, readabilityActor);
+        controller = new HomeController(mockWs, executor, mockConfig, system, userParentActor, readabilityActor, StatisticsActor, CacheActor);
     }
 
     /**
@@ -443,9 +448,11 @@ public class HomeControllerTest {
         ActorSystem ast = Mockito.mock(ActorSystem.class);
         ActorRef<UserParentActor.Create> upa = Mockito.mock(ActorRef.class);
         ActorRef<ReadabilityActor.Command> ra = Mockito.mock(ActorRef.class);
+        ActorRef<CacheActor.Command> ca = Mockito.mock(ActorRef.class);
+        ActorRef<StatisticsActor.Command> sa = Mockito.mock(ActorRef.class);
         Mockito.when(cfg.getString("newsapi.key")).thenReturn("dummyKey");
         Mockito.when(cfg.getString("newsapi.url")).thenReturn("https://newsapi.org/v2/everything?");
-        HomeController ctrl = new HomeController(ws, ex, cfg, ast, upa, ra);
+        HomeController ctrl = new HomeController(ws, ex, cfg, ast, upa, ra, sa, ca);
 
         // Access private method
         java.lang.reflect.Method m = HomeController.class

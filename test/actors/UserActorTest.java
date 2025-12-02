@@ -49,11 +49,14 @@ public class UserActorTest {
                 testKit.spawn(SourcesActor.create());
         ActorRef<ReadabilityActor.Command> readabilityActor =
                 testKit.spawn(ReadabilityActor.create());
+        ActorRef<CacheActor.Command> mockCacheActor =
+                testKit.spawn(CacheActor.create());
 
         Behavior<UserActor.Message> behavior = UserActor.create(
                 "test-user-1",
                 sourcesActor,
                 readabilityActor,
+                mockCacheActor,
                 mockWsClient,
                 testConfig
         );
@@ -68,11 +71,14 @@ public class UserActorTest {
                 testKit.spawn(SourcesActor.create());
         ActorRef<ReadabilityActor.Command> readabilityActor =
                 testKit.spawn(ReadabilityActor.create());
+        ActorRef<CacheActor.Command> mockCacheActor =
+                testKit.spawn(CacheActor.create());
 
         Behavior<UserActor.Message> behavior = UserActor.create(
                 "test-user-2",
                 sourcesActor,
                 readabilityActor,
+                mockCacheActor,
                 mockWsClient,
                 testConfig
         );
@@ -92,11 +98,14 @@ public class UserActorTest {
                 testKit.spawn(SourcesActor.create());
         ActorRef<ReadabilityActor.Command> readabilityActor =
                 testKit.spawn(ReadabilityActor.create());
+        ActorRef<CacheActor.Command> mockCacheActor =
+                testKit.spawn(CacheActor.create());
 
         Behavior<UserActor.Message> behavior1 = UserActor.create(
                 "user-1",
                 sourcesActor,
                 readabilityActor,
+                mockCacheActor,
                 mockWsClient,
                 testConfig
         );
@@ -105,6 +114,7 @@ public class UserActorTest {
                 "user-2",
                 sourcesActor,
                 readabilityActor,
+                mockCacheActor,
                 mockWsClient,
                 testConfig
         );
@@ -123,6 +133,8 @@ public class UserActorTest {
                 testKit.spawn(SourcesActor.create());
         ActorRef<ReadabilityActor.Command> readabilityActor =
                 testKit.spawn(ReadabilityActor.create());
+        ActorRef<CacheActor.Command> mockCacheActor =
+                testKit.spawn(CacheActor.create());
 
         Map<String, Object> configMap = new HashMap<>();
         configMap.put("newsapi.key", "different-key");
@@ -133,6 +145,7 @@ public class UserActorTest {
                 "test-user-3",
                 sourcesActor,
                 readabilityActor,
+                mockCacheActor,
                 mockWsClient,
                 differentConfig
         );
@@ -147,11 +160,14 @@ public class UserActorTest {
                 testKit.spawn(SourcesActor.create());
         ActorRef<ReadabilityActor.Command> readabilityActor =
                 testKit.spawn(ReadabilityActor.create());
+        ActorRef<CacheActor.Command> mockCacheActor =
+                testKit.spawn(CacheActor.create());
 
         Behavior<UserActor.Message> behavior = UserActor.create(
                 "test-user-4",
                 sourcesActor,
                 readabilityActor,
+                mockCacheActor,
                 mockWsClient,
                 testConfig
         );
@@ -176,11 +192,14 @@ public class UserActorTest {
                 testKit.spawn(SourcesActor.create());
         ActorRef<ReadabilityActor.Command> readabilityActor =
                 testKit.spawn(ReadabilityActor.create());
+        ActorRef<CacheActor.Command> mockCacheActor =
+                testKit.spawn(CacheActor.create());
 
         Behavior<UserActor.Message> behavior = UserActor.create(
                 "",
                 sourcesActor,
                 readabilityActor,
+                mockCacheActor,
                 mockWsClient,
                 testConfig
         );
@@ -195,11 +214,14 @@ public class UserActorTest {
                 testKit.spawn(SourcesActor.create());
         ActorRef<ReadabilityActor.Command> readabilityActor =
                 testKit.spawn(ReadabilityActor.create());
+        ActorRef<CacheActor.Command> mockCacheActor =
+                testKit.spawn(CacheActor.create());
 
         Behavior<UserActor.Message> behavior = UserActor.create(
                 null,
                 sourcesActor,
                 readabilityActor,
+                mockCacheActor,
                 mockWsClient,
                 testConfig
         );
@@ -214,11 +236,14 @@ public class UserActorTest {
                 testKit.spawn(SourcesActor.create());
         ActorRef<ReadabilityActor.Command> readabilityActor =
                 testKit.spawn(ReadabilityActor.create());
+        ActorRef<CacheActor.Command> mockCacheActor =
+                testKit.spawn(CacheActor.create());
 
         Behavior<UserActor.Message> behavior = UserActor.create(
                 "test-user-5",
                 sourcesActor,
                 readabilityActor,
+                mockCacheActor,
                 mockWsClient,
                 testConfig
         );
@@ -242,6 +267,8 @@ public class UserActorTest {
                 testKit.spawn(SourcesActor.create());
         ActorRef<ReadabilityActor.Command> readabilityActor =
                 testKit.spawn(ReadabilityActor.create());
+        ActorRef<CacheActor.Command> mockCacheActor =
+                testKit.spawn(CacheActor.create());
 
         Map<String, Object> minimalConfig = new HashMap<>();
         minimalConfig.put("newsapi.key", "key");
@@ -252,6 +279,7 @@ public class UserActorTest {
                 "test-user-6",
                 sourcesActor,
                 readabilityActor,
+                mockCacheActor,
                 mockWsClient,
                 config
         );
@@ -266,6 +294,8 @@ public class UserActorTest {
                 testKit.spawn(SourcesActor.create());
         ActorRef<ReadabilityActor.Command> readabilityActor =
                 testKit.spawn(ReadabilityActor.create());
+        ActorRef<CacheActor.Command> mockCacheActor =
+                testKit.spawn(CacheActor.create());
 
         String longId = "a".repeat(1000);
 
@@ -273,6 +303,7 @@ public class UserActorTest {
                 longId,
                 sourcesActor,
                 readabilityActor,
+                mockCacheActor,
                 mockWsClient,
                 testConfig
         );
@@ -287,11 +318,14 @@ public class UserActorTest {
                 testKit.spawn(SourcesActor.create());
         ActorRef<ReadabilityActor.Command> readabilityActor =
                 testKit.spawn(ReadabilityActor.create());
+        ActorRef<CacheActor.Command> mockCacheActor =
+                testKit.spawn(CacheActor.create());
 
         Behavior<UserActor.Message> behavior = UserActor.create(
                 "user@#$%^&*()_+-=[]{}|;':\",./<>?",
                 sourcesActor,
                 readabilityActor,
+                mockCacheActor,
                 mockWsClient,
                 testConfig
         );

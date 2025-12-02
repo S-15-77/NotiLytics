@@ -8,6 +8,7 @@ import play.libs.ws.WSClient;
 import com.google.inject.AbstractModule;
 import com.google.inject.TypeLiteral;
 import com.typesafe.config.Config;
+import com.google.inject.name.Names;
 import play.libs.pekko.PekkoGuiceSupport;
 import org.apache.pekko.actor.typed.SupervisorStrategy;
 import org.apache.pekko.actor.typed.javadsl.Behaviors;
@@ -36,6 +37,16 @@ public class Module extends AbstractModule implements PekkoGuiceSupport {
         bind(new TypeLiteral<ActorRef<ReadabilityActor.Command>>() {})
                 .toProvider(ReadabilityActorProvider.class)
                 .asEagerSingleton();
+
+        //Stat actor and cache actor that communicates with it
+        bind(new TypeLiteral<ActorRef<StatisticsActor.Command>>() {})
+                .toProvider(StatisticsActorProvider.class)
+                .asEagerSingleton();
+
+        bind(new TypeLiteral<ActorRef<CacheActor.Command>>() {})
+                .toProvider(CacheActorProvider.class)
+                .asEagerSingleton();
+
     }
 
     @Singleton
@@ -108,20 +119,23 @@ public class Module extends AbstractModule implements PekkoGuiceSupport {
         private final WSClient ws;
         private final Config config;
         private final ActorRef<ReadabilityActor.Command> readabilityActor;
+        private final ActorRef<CacheActor.Command> cacheActor;
 
         @Inject
         public UserActorFactoryProvider(ActorRef<SourcesActor.GetSources> sourcesActor,
                                         ActorRef<ReadabilityActor.Command> readabilityActor,
+                                        ActorRef<CacheActor.Command> cacheActor,
                                         WSClient ws, Config config) {
             this.sourcesActor = sourcesActor;
             this.readabilityActor = readabilityActor;
+            this.cacheActor = cacheActor;
             this.ws = ws;
             this.config = config;
         }
 
         @Override
         public UserActor.Factory get() {
-            return id -> UserActor.create(id, sourcesActor, readabilityActor, ws, config);
+            return id -> UserActor.create(id, sourcesActor, readabilityActor, cacheActor, ws, config);
         }
     }
 
@@ -144,4 +158,44 @@ public class Module extends AbstractModule implements PekkoGuiceSupport {
                     "readabilityActor");
         }
     }
+
+    @Singleton
+    public static class StatisticsActorProvider implements Provider<ActorRef<StatisticsActor.Command>> {
+        private final ActorSystem actorSystem;
+
+        @Inject
+        public StatisticsActorProvider(ActorSystem actorSystem) {
+            this.actorSystem = actorSystem;
+        }
+
+        @Override
+        public ActorRef<StatisticsActor.Command> get() {
+            return Adapter.spawn(
+                    actorSystem,
+                    StatisticsActor.create(),
+                    "statisticsActor"
+            );
+        }
+    }
+
+    @Singleton
+    public static class CacheActorProvider implements Provider<ActorRef<CacheActor.Command>> {
+
+        private final ActorSystem actorSystem;
+
+        @Inject
+        public CacheActorProvider(ActorSystem actorSystem) {
+            this.actorSystem = actorSystem;
+        }
+
+        @Override
+        public ActorRef<CacheActor.Command> get() {
+            return Adapter.spawn(
+                    actorSystem,
+                    CacheActor.create(),
+                    "cacheActor"
+            );
+        }
+    }
+
 }

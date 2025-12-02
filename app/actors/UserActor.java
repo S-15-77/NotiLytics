@@ -3,6 +3,8 @@ package actors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import actors.SourcesActor.GetSources;
+import actors.CacheActor;
+
 import org.apache.pekko.Done;
 import org.apache.pekko.NotUsed;
 import org.apache.pekko.actor.typed.ActorRef;
@@ -63,6 +65,7 @@ public class UserActor {
     private final String id;
     private final ActorRef<SourcesActor.GetSources> sourcesActor;
     private final ActorRef<ReadabilityActor.Command> readabilityActor;
+    private final ActorRef<CacheActor.Command> cacheActor;
     private final Scheduler scheduler;
     private static final Logger logger = LoggerFactory.getLogger(UserActor.class);
     private final ActorContext<Message> context;
@@ -88,10 +91,11 @@ public class UserActor {
      */
     public static Behavior<Message> create(String id, ActorRef<GetSources> sourcesActor,
                                            ActorRef<ReadabilityActor.Command> readabilityActor,
+                                           ActorRef<CacheActor.Command> cacheActor,
                                            WSClient ws, Config config) {
         return Behaviors.setup(context -> {
             return Behaviors.withTimers(timers -> {
-                return new UserActor(id, sourcesActor, readabilityActor, ws, config, context, timers).behavior();
+                return new UserActor(id, sourcesActor, readabilityActor, cacheActor, ws, config, context, timers).behavior();
             });
         });
     }
@@ -100,6 +104,7 @@ public class UserActor {
     public UserActor(String id,
                      ActorRef<GetSources> sourcesActor,
                      ActorRef<ReadabilityActor.Command> readabilityActor,
+                     ActorRef<CacheActor.Command> cacheActor,
                      WSClient ws,
                      Config config,
                      ActorContext<Message> context,
@@ -113,6 +118,7 @@ public class UserActor {
         this.scheduler = context.getSystem().scheduler();
         this.context = context;
         this.mat = Materializer.matFromSystem(context.getSystem());
+        this.cacheActor = cacheActor;
 
         timers.startTimerAtFixedRate(PollTick.get(), Duration.ofSeconds(60));
 
@@ -227,7 +233,10 @@ public class UserActor {
                             .collect(Collectors.toList());
 
                     if (isInitial) {
-                        List<Article> initial = newArticles.stream().limit(10).collect(Collectors.toList());
+                        List<Article> initial = newArticles.stream().limit(50).collect(Collectors.toList());
+
+                        // /!\ Changed limit here (I need 50 for the cache) tell me if any problem detected on your end
+
                         if (!initial.isEmpty()) {
                             calculateReadabilityAndSend(query, initial, "initial");
                         }
@@ -283,6 +292,7 @@ public class UserActor {
             }
 
             QueryResult qr = new QueryResult(query, articles, avgGrade, avgScore);
+            cacheActor.tell(new CacheActor.Put(query, qr));
 
             QueryResult existing = cache.get(query);
             if (existing != null) {
@@ -324,7 +334,9 @@ public class UserActor {
         message.set("readability", readability);
 
         ArrayNode articlesArray = mapper.createArrayNode();
-        for (int i = 0; i < articles.size(); i++) {
+        List<Article> visible = articles.stream().limit(10).toList();
+
+        for (int i = 0; i < visible.size(); i++) {
             Article article = articles.get(i);
             ObjectNode articleNode = mapper.createObjectNode();
             articleNode.put("title", article.getTitle());
