@@ -47,6 +47,10 @@ public class Module extends AbstractModule implements PekkoGuiceSupport {
                 .toProvider(CacheActorProvider.class)
                 .asEagerSingleton();
 
+
+        bind(new TypeLiteral<ActorRef<SourceProfileActor.Command>>() {})
+                .toProvider(SourceProfileActorProvider.class)
+                .asEagerSingleton();
     }
 
     @Singleton
@@ -198,4 +202,30 @@ public class Module extends AbstractModule implements PekkoGuiceSupport {
         }
     }
 
+
+    @Singleton
+    public static class SourceProfileActorProvider implements Provider<ActorRef<SourceProfileActor.Command>> {
+        private final ActorSystem actorSystem;
+        private final WSClient ws;
+        private final Config config;
+
+        @Inject
+        public SourceProfileActorProvider(ActorSystem actorSystem, WSClient ws, Config config) {
+            this.actorSystem = actorSystem;
+            this.ws = ws;
+            this.config = config;
+        }
+
+        @Override
+        public ActorRef<SourceProfileActor.Command> get() {
+
+            String baseUrl = config.getString("newsapi.url");
+            String apiKey  = config.getString("newsapi.key");
+
+            return Adapter.spawn(
+                    actorSystem,
+                    SourceProfileActor.create(baseUrl, apiKey, ws),
+                    "SourceProfileActor");
+        }
+    }
 }

@@ -6,6 +6,7 @@ import actors.UserParentActor;
 import actors.StatisticsActor;
 import actors.CacheActor;
 
+import actors.SourceProfileActor;
 import models.Article;
 import models.QueryResult;
 import models.ReadabilityCalculator;
@@ -55,6 +56,7 @@ public class HomeController extends Controller {
     private final ActorRef<StatisticsActor.Command> statisticsActor;
     private final ActorRef<CacheActor.Command> cacheActor;
 
+    private final ActorRef<SourceProfileActor.Command> profileActor;
     Map<String, QueryResult> cache = new LinkedHashMap<>();
 
     private static final String SESSION_KEY = "queries";
@@ -155,7 +157,8 @@ public class HomeController extends Controller {
                           ActorRef<UserParentActor.Create> userParentActor,
                           ActorRef<ReadabilityActor.Command> readabilityActor,
                           ActorRef<StatisticsActor.Command> statisticsActor,
-                          ActorRef<CacheActor.Command> cacheActor) {
+                          ActorRef<CacheActor.Command> cacheActor,
+                          ActorRef<SourceProfileActor.Command> profileActor) {
         this.ws = ws;
         this.executor = executor;
         this.Key = config.getString("newsapi.key");
@@ -165,6 +168,7 @@ public class HomeController extends Controller {
         this.readabilityActor = readabilityActor;
         this.statisticsActor = statisticsActor;
         this.cacheActor = cacheActor;
+        this.profileActor = profileActor;
     }
 
     /**
@@ -342,33 +346,45 @@ public class HomeController extends Controller {
      * @return the rendered result.
      * @author Haytham
      */
+//    public CompletionStage<Result> profile(String sourceName, String id) {
+//
+//        String requestUrl = this.url + "sources=" + (id != null ? id : sourceName) + "&apiKey=" + this.Key;
+//
+//        Client client = new Client(this.ws);
+//
+//        CompletionStage<List<Article>> response = client.clientRequest(requestUrl);
+//
+//        return response.thenApply(articles -> {
+//
+//            if (articles == null || articles.isEmpty()) {
+//                return ok(views.html.sourceProfile.render(
+//                        new SourceProfile(sourceName, "", "No Articles Found for this source at this time. Please try again later!"),
+//                        new ArrayList<>()
+//                ));
+//            }
+//
+//            List<Article> last10 = articles.stream().limit(10).toList();
+//
+//            SourceProfile profile = new SourceProfile(
+//                    sourceName,
+//                    last10.get(0).getSourceUrl(),
+//                    "Listing Articles from " + sourceName + "."
+//            );
+//
+//            return ok(views.html.sourceProfile.render(profile,last10));
+//        });
+//    }
+
     public CompletionStage<Result> profile(String sourceName, String id) {
+        Scheduler scheduler = Adapter.toTyped(system.scheduler());
 
-        String requestUrl = this.url + "sources=" + (id != null ? id : sourceName) + "&apiKey=" + this.Key;
+        return AskPattern.ask(
+                profileActor,
+                replyTo -> new SourceProfileActor.ProfileRequest(sourceName, id, replyTo),
+                Duration.ofSeconds(5),
+                scheduler
+        );
 
-        Client client = new Client(this.ws);
-
-        CompletionStage<List<Article>> response = client.clientRequest(requestUrl);
-
-        return response.thenApply(articles -> {
-
-            if (articles == null || articles.isEmpty()) {
-                return ok(views.html.sourceProfile.render(
-                        new SourceProfile(sourceName, "", "No Articles Found for this source at this time. Please try again later!"),
-                        new ArrayList<>()
-                ));
-            }
-
-            List<Article> last10 = articles.stream().limit(10).toList();
-
-            SourceProfile profile = new SourceProfile(
-                    sourceName,
-                    last10.get(0).getSourceUrl(),
-                    "Listing Articles from " + sourceName + "."
-            );
-
-            return ok(views.html.sourceProfile.render(profile,last10));
-        });
     }
 
     /**
