@@ -1,7 +1,11 @@
 package controllers;
 
 import actors.ReadabilityActor;
+import actors.StatisticsActor;
 import actors.UserParentActor;
+import actors.StatisticsActor;
+import actors.CacheActor;
+
 import actors.SourceProfileActor;
 import models.Article;
 import models.QueryResult;
@@ -49,6 +53,9 @@ public class HomeController extends Controller {
     private final ActorSystem system;
     private final ActorRef<UserParentActor.Create> userParentActor;
     private final ActorRef<ReadabilityActor.Command> readabilityActor;
+    private final ActorRef<StatisticsActor.Command> statisticsActor;
+    private final ActorRef<CacheActor.Command> cacheActor;
+
     private final ActorRef<SourceProfileActor.Command> profileActor;
     Map<String, QueryResult> cache = new LinkedHashMap<>();
 
@@ -149,6 +156,8 @@ public class HomeController extends Controller {
                           ActorSystem system,
                           ActorRef<UserParentActor.Create> userParentActor,
                           ActorRef<ReadabilityActor.Command> readabilityActor,
+                          ActorRef<StatisticsActor.Command> statisticsActor,
+                          ActorRef<CacheActor.Command> cacheActor,
                           ActorRef<SourceProfileActor.Command> profileActor) {
         this.ws = ws;
         this.executor = executor;
@@ -157,6 +166,8 @@ public class HomeController extends Controller {
         this.system = system;
         this.userParentActor = userParentActor;
         this.readabilityActor = readabilityActor;
+        this.statisticsActor = statisticsActor;
+        this.cacheActor = cacheActor;
         this.profileActor = profileActor;
     }
 
@@ -272,7 +283,7 @@ public class HomeController extends Controller {
     }
 
     /**
-     * Handles the calculation of the word statistics for the articles.
+     * Handles the calculation of the word statistics for the articles now using Actors.
      *
      * @param request The HTTP request.
      * @param key     the statistics button clicked
@@ -280,13 +291,52 @@ public class HomeController extends Controller {
      * @author Karim BG
      */
     public CompletionStage<Result> stats(Http.Request request, String key) {
-        return CompletableFuture.supplyAsync(() -> {
-            //NOT DONE YET
-            return ok(views.html.statProfile.render(
-                    "Statistics for " + key,
-                    "Statistics feature not done yet while being migrated to WebSocket architecture"
-            ));
+        /*return CompletableFuture.supplyAsync(() -> {
+            Statistics s = new Statistics(cache.get(key));
+            int numberOfArticles = cache.get(key).getArticles().size();
+            List<String> titlesAndDescription = new ArrayList<>(s.getTitles());
+            titlesAndDescription.addAll(s.getDescriptions());
+            String counter = Statistics.getString(Statistics.getCounter(
+                    Statistics.filtering(
+                            Statistics.getWords(titlesAndDescription))));
+            return ok(views.html.statProfile.render("Word Statistics for " + key + " (" + numberOfArticles + " articles)", counter));
+        });*/
+        Duration timeout = Duration.ofSeconds(5);
+        Scheduler scheduler = Adapter.toTyped(system.scheduler());
+
+        //Cache Information loaded
+        return AskPattern.<CacheActor.Command, CacheActor.Response>ask(
+                        cacheActor,
+                        replyTo -> new CacheActor.Get(key, replyTo),
+                        timeout,
+                        scheduler
+                )
+                .thenCompose(cacheResponse -> {
+
+
+            QueryResult query = cacheResponse.result();
+
+            if (query == null) {
+                return CompletableFuture.completedFuture(
+                        badRequest("No Data for : " + key) //returns a empty
+                );
+            }
+
+            //get stat information froom query
+            return AskPattern.<StatisticsActor.Command, StatisticsActor.Response>ask(
+                            statisticsActor,
+                            replyTo -> new StatisticsActor.Compute(query, replyTo),
+                            timeout,
+                            scheduler
+                    ).thenApply(statResponse -> {
+
+                int number = query.getArticles().size();
+                String title = "Word Statistics for " + key + " (" + number + " articles)";
+
+                return ok(views.html.statProfile.render(title, statResponse.resultString()));
+            });
         });
+
     }
 
 

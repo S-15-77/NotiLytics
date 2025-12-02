@@ -2,6 +2,8 @@ package controllers;
 
 import Services.Client;
 import actors.SourceProfileActor;
+import actors.CacheActor;
+import actors.StatisticsActor;
 import actors.UserParentActor;
 import actors.ReadabilityActor;
 import models.Article;
@@ -9,8 +11,10 @@ import models.QueryResult;
 import org.apache.pekko.actor.typed.ActorRef;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mock;
 import org.mockito.MockedConstruction;
 import org.mockito.Mockito;
+import play.libs.ws.*;
 import play.mvc.Http;
 import play.mvc.Result;
 import com.typesafe.config.Config;
@@ -33,8 +37,11 @@ import play.libs.ws.WSResponse;
 
 
 import java.lang.reflect.Method;
+import java.util.*;
+import java.util.concurrent.*;
 
 import org.apache.pekko.actor.ActorSystem;
+
 
 public class HomeControllerTest {
 
@@ -47,6 +54,8 @@ public class HomeControllerTest {
     private ActorSystem system;
     private ActorRef<UserParentActor.Create> userParentActor;
     private ActorRef<ReadabilityActor.Command> readabilityActor;
+    private ActorRef<StatisticsActor.Command> StatisticsActor;
+    private ActorRef<CacheActor.Command> CacheActor;
     private ActorRef<SourceProfileActor.Command> sourceProfileActor;
 
     /**
@@ -64,6 +73,8 @@ public class HomeControllerTest {
         system = Mockito.mock(ActorSystem.class);
         userParentActor = Mockito.mock(ActorRef.class);
         readabilityActor = Mockito.mock(ActorRef.class);
+        StatisticsActor = Mockito.mock(ActorRef.class);
+        CacheActor = Mockito.mock(ActorRef.class);
         sourceProfileActor = Mockito.mock(ActorRef.class);
         executor = Executors.newSingleThreadExecutor();
 
@@ -86,7 +97,7 @@ public class HomeControllerTest {
         when(mockRequest.get()).thenReturn(fakeFuture);
 
         // --- Instantiate controller ---
-        controller = new HomeController(mockWs, executor, mockConfig, system, userParentActor, readabilityActor, sourceProfileActor);
+        controller = new HomeController(mockWs, executor, mockConfig, system, userParentActor, readabilityActor, StatisticsActor, CacheActor, sourceProfileActor);
     }
 
     /**
@@ -459,10 +470,12 @@ public class HomeControllerTest {
         ActorSystem ast = Mockito.mock(ActorSystem.class);
         ActorRef<UserParentActor.Create> upa = Mockito.mock(ActorRef.class);
         ActorRef<ReadabilityActor.Command> ra = Mockito.mock(ActorRef.class);
+        ActorRef<CacheActor.Command> ca = Mockito.mock(ActorRef.class);
+        ActorRef<StatisticsActor.Command> sa = Mockito.mock(ActorRef.class);
         ActorRef<SourceProfileActor.Command> spa = Mockito.mock(ActorRef.class);
         Mockito.when(cfg.getString("newsapi.key")).thenReturn("dummyKey");
         Mockito.when(cfg.getString("newsapi.url")).thenReturn("https://newsapi.org/v2/everything?");
-        HomeController ctrl = new HomeController(ws, ex, cfg, ast, upa, ra, spa);
+        HomeController ctrl = new HomeController(ws, ex, cfg, ast, upa, ra, sa, ca, spa);
 
         // Access private method
         java.lang.reflect.Method m = HomeController.class
