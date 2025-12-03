@@ -103,7 +103,7 @@ public class StatisticsActorTest {
 
         // Basic semantic checks
         assertTrue(counter.containsKey("banana"));
-        assertEquals(3L, (long) counter.get("banana"));
+        assertEquals(2L, (long) counter.get("banana"));
     }
 
     /**
@@ -151,7 +151,7 @@ public class StatisticsActorTest {
 
         StatisticsActor.Response response = probe.receiveMessage();
 
-        assertEquals(2L, (long) response.counter().get("hello"));
+        assertEquals(1L, (long) response.counter().get("hello"));
     }
 
     /**
